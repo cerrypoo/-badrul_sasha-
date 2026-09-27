@@ -81,6 +81,16 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     }
   }, [checkedCount]);
 
+  // Small celebration on the very first PDF upload
+  const prevPdfCountRef = useRef<number | null>(null);
+  useEffect(() => {
+    if (prevPdfCountRef.current === 0 && withPdfCount === 1) {
+      setToast('First jobsheet uploaded! 🐾');
+      setTimeout(() => setToast(null), 2500);
+    }
+    prevPdfCountRef.current = withPdfCount;
+  }, [withPdfCount]);
+
   // Toast when a lecturer note appears/changes
   useEffect(() => {
     const prev = prevJobsheetsRef.current;
