@@ -49,7 +49,7 @@ export const subscribeAllJobsheets = (
 };
 
 export const uploadPdf = async (student: Student, id: number, file: File) => {
-  const path = `upload/${student}/${id}/pdf-${file.name}`;
+  const path = `jobsheets/${student}/${id}/pdf-${file.name}`;
   const storageRef = ref(storage, path);
   await uploadBytes(storageRef, file);
   const url = await getDownloadURL(storageRef);
@@ -76,7 +76,7 @@ export const uploadPdf = async (student: Student, id: number, file: File) => {
 };
 
 export const uploadLive = async (student: Student, id: number, file: File) => {
-  const path = `upload/${student}/${id}/live-${file.name}`;
+  const path = `jobsheets/${student}/${id}/live-${file.name}`;
   const storageRef = ref(storage, path);
   await uploadBytes(storageRef, file);
   const url = await getDownloadURL(storageRef);
