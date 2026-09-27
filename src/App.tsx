@@ -10,6 +10,8 @@ import { Footer } from './components/Footer';
 import { BookingConfirmationModal } from './components/BookingConfirmationModal';
 import { JobsheetPage } from './components/JobsheetPage';
 import { LibraryPage } from './components/LibraryPage';
+import { LeaderboardSection } from './components/LeaderboardSection';
+import { FaqTestimonialSection } from './components/FaqTestimonialSection';
 
 const TOTAL_JOBSHEETS = 24;
 
@@ -22,6 +24,7 @@ const createInitialJobsheets = (): JobsheetItem[] =>
     uploadedAt: null,
     liveName: null,
     liveUrl: null,
+    note: null,
   }));
 
 
@@ -178,6 +181,12 @@ export default function App() {
 
       {/* 4. Gallery Section ("Gallery") */}
       <GallerySection />
+
+      {/* 5. Leaderboard */}
+      <LeaderboardSection jobsheetsByStudent={jobsheetsByStudent} />
+
+      {/* 5b. FAQ + Testimonials */}
+      <FaqTestimonialSection />
 
       {/* 6. Footer */}
       <Footer onNavigateSection={handleNavigateSection} onNavigateJobsheet={handleNavigateJobsheet} onNavigateLibrary={handleNavigateLibrary} />

@@ -77,4 +77,5 @@ export interface JobsheetItem {
   uploadedAt: string | null;
   liveName: string | null;
   liveUrl: string | null;
+  note: string | null;
 }

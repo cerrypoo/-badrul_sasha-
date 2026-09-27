@@ -1,6 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { ArrowLeft, GraduationCap, Search, BookOpen, Upload, Eye, Radio, PawPrint, X } from 'lucide-react';
+import { ArrowLeft, GraduationCap, Search, BookOpen, Upload, Eye, Radio, PawPrint, X, Printer, CalendarClock, MessageSquare } from 'lucide-react';
 import { JobsheetStatus, JobsheetItem } from '../types';
+import { getRank, formatDeadline, isOverdue } from '../utils/jobsheetHelpers';
 
 const TOTAL_JOBSHEETS = 24;
 
@@ -40,6 +41,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
 
   const checkedCount = jobsheets.filter((j) => j.status === 'checked').length;
   const withPdfCount = jobsheets.filter((j) => j.pdfUrl).length;
+  const rank = getRank(checkedCount);
+  const progressPct = Math.round((checkedCount / TOTAL_JOBSHEETS) * 100);
 
   const filtered = useMemo(() => {
     return jobsheets.filter((j) => {
@@ -134,10 +137,23 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               Manage your jobsheets and upload your PDF submissions here.
             </p>
           </div>
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">
-            <GraduationCap className="w-3.5 h-3.5" />
-            Student
-          </span>
+          <div className="flex items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full border ${rank.color}`}>
+              <span>{rank.emoji}</span>
+              {rank.label}
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-teal-500/15 text-teal-300 border border-teal-500/30">
+              <GraduationCap className="w-3.5 h-3.5" />
+              Student
+            </span>
+            <button
+              onClick={() => window.print()}
+              title="Print progress report"
+              className="p-2 text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 rounded-full border border-slate-700 transition-colors"
+            >
+              <Printer className="w-3.5 h-3.5" />
+            </button>
+          </div>
         </div>
 
         {/* Stats */}
@@ -153,6 +169,20 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               {withPdfCount}/{TOTAL_JOBSHEETS}
             </div>
             <p className="mt-1 text-xs text-slate-400">Jobsheets with PDF</p>
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        <div className="mt-4 bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4">
+          <div className="flex items-center justify-between text-xs text-slate-400 mb-2">
+            <span>Overall Progress</span>
+            <span className="font-mono text-teal-300">{progressPct}%</span>
+          </div>
+          <div className="h-2.5 w-full bg-slate-800 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full transition-all duration-700"
+              style={{ width: `${progressPct}%` }}
+            />
           </div>
         </div>
 
@@ -194,18 +224,41 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               return (
                 <div
                   key={j.id}
-                  className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-5 text-left transition-transform hover:scale-[1.02]"
+                  className={`bg-slate-900/50 border rounded-2xl p-5 text-left transition-transform hover:scale-[1.02] ${
+                    isOverdue(j.id, j.status !== 'not-started')
+                      ? 'border-red-500/50'
+                      : 'border-slate-800/80'
+                  }`}
                 >
-                  <h3 className="text-sm font-bold text-white">Jobsheet {j.id}</h3>
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-bold text-white">Jobsheet {j.id}</h3>
+                    <span
+                      className={`flex items-center gap-1 text-[10px] font-mono ${
+                        isOverdue(j.id, j.status !== 'not-started') ? 'text-red-400' : 'text-slate-500'
+                      }`}
+                    >
+                      <CalendarClock className="w-3 h-3" />
+                      {formatDeadline(j.id)}
+                    </span>
+                  </div>
                   <div className="mt-2 flex items-center gap-1.5 text-xs">
                     <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
                     <span className={meta.text}>{meta.label}</span>
+                    {isOverdue(j.id, j.status !== 'not-started') && (
+                      <span className="text-[10px] text-red-400 font-semibold">OVERDUE</span>
+                    )}
                   </div>
                   <p className="mt-1 text-xs text-slate-500 truncate">
                     {j.pdfName ? j.pdfName : 'No PDF uploaded'}
                   </p>
                   {j.uploadedAt && (
                     <p className="mt-0.5 text-[11px] text-slate-600">Uploaded: {j.uploadedAt}</p>
+                  )}
+                  {j.note && (
+                    <p className="mt-2 flex items-start gap-1.5 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2">
+                      <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
+                      {j.note}
+                    </p>
                   )}
 
                   <div className="mt-4 flex flex-wrap items-center gap-2">
