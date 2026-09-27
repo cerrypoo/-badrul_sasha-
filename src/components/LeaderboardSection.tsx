@@ -23,8 +23,17 @@ export const LeaderboardSection: React.FC<LeaderboardSectionProps> = ({ jobsheet
     .sort((a, b) => b.checked - a.checked);
 
   return (
-    <section className="w-full py-16 px-4 sm:px-6 lg:px-8 bg-slate-900 border-t border-slate-800">
-      <div className="max-w-3xl mx-auto">
+    <section className="relative w-full py-16 px-4 sm:px-6 lg:px-8 bg-slate-900 border-t border-slate-800 overflow-hidden">
+      <div
+        className="absolute inset-0 opacity-[0.06] pointer-events-none"
+        style={{
+          backgroundImage: "url('images/paw_trail.jpg')",
+          backgroundRepeat: 'repeat',
+          backgroundSize: '220px',
+          filter: 'invert(1)',
+        }}
+      />
+      <div className="relative max-w-3xl mx-auto">
         <div className="text-center max-w-xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-teal-400 mb-2">
             <Sparkles className="w-3.5 h-3.5" />
