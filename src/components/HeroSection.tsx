@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { CatsLogo } from './CatsLogo';
 import { ChevronDown, Sparkles } from 'lucide-react';
 import { ThemeMode } from '../types';
@@ -6,9 +6,46 @@ import { ThemeMode } from '../types';
 interface HeroSectionProps {
   themeMode: ThemeMode;
   onBookNowClick: () => void;
+  totalChecked: number;
+  totalJobsheets: number;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ themeMode, onBookNowClick }) => {
+const useCountUp = (target: number) => {
+  const [value, setValue] = useState(0);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (!entry.isIntersecting) return;
+        observer.disconnect();
+        const duration = 900;
+        const start = performance.now();
+        const tick = (now: number) => {
+          const progress = Math.min((now - start) / duration, 1);
+          setValue(Math.round(progress * target));
+          if (progress < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [target]);
+
+  return { value, ref };
+};
+
+export const HeroSection: React.FC<HeroSectionProps> = ({
+  themeMode,
+  onBookNowClick,
+  totalChecked,
+  totalJobsheets,
+}) => {
+  const counter = useCountUp(totalChecked);
   const scrollToBooking = () => {
     const el = document.getElementById('book');
     if (el) {
@@ -67,6 +104,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ themeMode, onBookNowCl
         <span>Organized By Course</span>
         <span aria-hidden="true" className="text-white/50">·</span>
         <span>Instant Student Access</span>
+      </div>
+
+      {/* Animated stats counter */}
+      <div ref={counter.ref} className="mt-6 flex items-center gap-2 text-white/90 drop-shadow-md">
+        <span className="text-2xl font-bold font-mono">{counter.value}</span>
+        <span className="text-xs uppercase tracking-widest">/ {totalJobsheets} jobsheets checked</span>
       </div>
     </div>
   );

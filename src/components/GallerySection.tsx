@@ -1,5 +1,6 @@
 import React from 'react';
 import { Sparkles } from 'lucide-react';
+import { Reveal } from './Reveal';
 
 const STEPS = [
   {
@@ -23,7 +24,7 @@ export const GallerySection: React.FC = () => {
   return (
     <section id="gallery" className="w-full py-16 px-4 sm:px-6 lg:px-8 bg-slate-950 border-t border-slate-800">
       <div className="max-w-6xl mx-auto">
-        <div className="text-center max-w-2xl mx-auto mb-12">
+        <Reveal className="text-center max-w-2xl mx-auto mb-12">
           <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-teal-400 mb-2">
             <Sparkles className="w-3.5 h-3.5" />
             <span>How It Works</span>
@@ -34,13 +35,13 @@ export const GallerySection: React.FC = () => {
           <p className="mt-3 text-sm text-slate-400">
             Three simple steps from upload to certified completion.
           </p>
-        </div>
+        </Reveal>
 
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
           {STEPS.map((step) => (
             <div
               key={step.number}
-              className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-6"
+              className="tilt-hover bg-slate-900/50 border border-slate-800/80 rounded-2xl p-6"
             >
               <div className="w-10 h-10 rounded-xl bg-teal-500/15 text-teal-400 flex items-center justify-center mb-4 font-bold text-sm font-mono">
                 {step.number}

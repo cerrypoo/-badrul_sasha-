@@ -97,6 +97,14 @@ export const HeroVideoBackground: React.FC<HeroVideoBackgroundProps> = ({
     <div className="relative w-full min-h-screen overflow-hidden bg-slate-950 flex flex-col justify-between">
       {USE_PRANK_MP3 && <audio ref={prankAudioRef} src="audio/prank_sound.mp3" loop />}
 
+      {/* 0. Loading screen while the active video hydrates */}
+      {!(themeMode === 'day' ? isDayVideoReady : isNightVideoReady) && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center gap-3 bg-slate-950">
+          <span className="paw-spinner text-4xl">🐾</span>
+          <p className="text-xs text-white/70 tracking-widest uppercase">Loading...</p>
+        </div>
+      )}
+
       {/* 1. Ultra-fast Tiny Blur Placeholder (< 500 bytes) */}
       <div
         className={`absolute inset-0 z-0 bg-cover bg-center transition-opacity duration-1000 filter blur-xl scale-105 pointer-events-none ${

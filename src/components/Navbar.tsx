@@ -40,7 +40,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="w-full z-50 transition-all duration-300">
+    <header className="sticky top-0 w-full z-50 transition-all duration-300">
       {/* Top Brand Banner matching the screenshot */}
       <div className="w-full text-center py-2.5 px-4 bg-slate-950/90 border-b border-white/10">
         <h1 className="text-sm md:text-base font-semibold tracking-wider text-white drop-shadow-md">

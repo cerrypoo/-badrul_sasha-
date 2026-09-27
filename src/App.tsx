@@ -12,6 +12,10 @@ import { JobsheetPage } from './components/JobsheetPage';
 import { LibraryPage } from './components/LibraryPage';
 import { LeaderboardSection } from './components/LeaderboardSection';
 import { FaqTestimonialSection } from './components/FaqTestimonialSection';
+import { RecentActivitySection } from './components/RecentActivitySection';
+import { TechStackSection } from './components/TechStackSection';
+import { PawCursorTrail } from './components/PawCursorTrail';
+import { playMeow } from './utils/meow';
 
 const TOTAL_JOBSHEETS = 24;
 
@@ -39,9 +43,35 @@ export default function App() {
     badrul: createInitialJobsheets(),
   });
 
+  const [scrollPct, setScrollPct] = useState(0);
+
   const updateStudentJobsheets = (student: Student, jobsheets: JobsheetItem[]) => {
     setJobsheetsByStudent((prev) => ({ ...prev, [student]: jobsheets }));
   };
+
+  const totalChecked =
+    jobsheetsByStudent.sasha.filter((j) => j.status === 'checked').length +
+    jobsheetsByStudent.badrul.filter((j) => j.status === 'checked').length;
+  const totalJobsheets = jobsheetsByStudent.sasha.length + jobsheetsByStudent.badrul.length;
+
+  // Scroll progress bar
+  useEffect(() => {
+    const handle = () => {
+      const height = document.documentElement.scrollHeight - window.innerHeight;
+      setScrollPct(height > 0 ? (window.scrollY / height) * 100 : 0);
+    };
+    window.addEventListener('scroll', handle, { passive: true });
+    return () => window.removeEventListener('scroll', handle);
+  }, []);
+
+  // Play a tiny meow chirp on any button click
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if ((e.target as HTMLElement)?.closest('button')) playMeow();
+    };
+    document.addEventListener('click', handleClick);
+    return () => document.removeEventListener('click', handleClick);
+  }, []);
 
   // Scroll to a section once the home page has mounted (needed when navigating from Jobsheet)
   useEffect(() => {
@@ -125,6 +155,8 @@ export default function App() {
   if (page === 'jobsheet' || page === 'library') {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100">
+        <div className="fixed top-0 left-0 h-0.5 bg-teal-400 z-[60] transition-all" style={{ width: `${scrollPct}%` }} />
+        <PawCursorTrail />
         <Navbar
           themeMode={themeMode}
           onToggleTheme={handleToggleTheme}
@@ -156,6 +188,9 @@ export default function App() {
         themeMode === 'day' ? 'bg-slate-950 text-slate-100' : 'bg-[#080d1a] text-slate-100'
       }`}
     >
+      <div className="fixed top-0 left-0 h-0.5 bg-teal-400 z-[60] transition-all" style={{ width: `${scrollPct}%` }} />
+      <PawCursorTrail />
+
       {/* 1. Hero Section with Optimized Dual-Video Background */}
       <HeroVideoBackground themeMode={themeMode} onToggleTheme={handleToggleTheme}>
         {/* Navigation Bar matching reference photo */}
@@ -173,6 +208,8 @@ export default function App() {
         <HeroSection
           themeMode={themeMode}
           onBookNowClick={handleOpenBooking}
+          totalChecked={totalChecked}
+          totalJobsheets={totalJobsheets}
         />
       </HeroVideoBackground>
 
@@ -185,8 +222,14 @@ export default function App() {
       {/* 5. Leaderboard */}
       <LeaderboardSection jobsheetsByStudent={jobsheetsByStudent} />
 
+      {/* 5a. Recent Activity */}
+      <RecentActivitySection jobsheetsByStudent={jobsheetsByStudent} />
+
       {/* 5b. FAQ + Testimonials */}
       <FaqTestimonialSection />
+
+      {/* 5c. Tech Stack */}
+      <TechStackSection />
 
       {/* 6. Footer */}
       <Footer onNavigateSection={handleNavigateSection} onNavigateJobsheet={handleNavigateJobsheet} onNavigateLibrary={handleNavigateLibrary} />

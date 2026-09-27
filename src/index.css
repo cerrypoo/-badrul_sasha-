@@ -88,6 +88,24 @@
   animation: catBlink 2.6s ease-in-out infinite;
 }
 
+/* Gentle 3D tilt on hover for cards */
+.tilt-hover {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.tilt-hover:hover {
+  transform: perspective(600px) rotateX(2deg) rotateY(-2deg) scale(1.02);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes pawSpin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.paw-spinner {
+  animation: pawSpin 1.2s linear infinite;
+  display: inline-block;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;

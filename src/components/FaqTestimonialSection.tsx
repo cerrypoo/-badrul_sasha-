@@ -71,7 +71,7 @@ export const FaqTestimonialSection: React.FC = () => {
           </h2>
           <div className="flex flex-col gap-4">
             {TESTIMONIALS.map((t) => (
-              <div key={t.name} className="bg-slate-900/50 border border-slate-800/80 rounded-xl p-5">
+              <div key={t.name} className="tilt-hover bg-slate-900/50 border border-slate-800/80 rounded-xl p-5">
                 <Quote className="w-4 h-4 text-teal-400 mb-2" />
                 <p className="text-sm text-slate-300 leading-relaxed italic">"{t.quote}"</p>
                 <p className="mt-3 text-xs text-slate-500 flex items-center gap-1.5">

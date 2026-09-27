@@ -2,6 +2,7 @@ import React from 'react';
 import { Sparkles, Trophy } from 'lucide-react';
 import { Student, JobsheetItem } from '../types';
 import { getRank } from '../utils/jobsheetHelpers';
+import { Reveal } from './Reveal';
 
 const STUDENT_NAMES: Record<Student, string> = {
   sasha: 'Sasha',
@@ -34,7 +35,7 @@ export const LeaderboardSection: React.FC<LeaderboardSectionProps> = ({ jobsheet
         }}
       />
       <div className="relative max-w-3xl mx-auto">
-        <div className="text-center max-w-xl mx-auto mb-10">
+        <Reveal className="text-center max-w-xl mx-auto mb-10">
           <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-teal-400 mb-2">
             <Sparkles className="w-3.5 h-3.5" />
             <span>Progress Race</span>
@@ -45,7 +46,7 @@ export const LeaderboardSection: React.FC<LeaderboardSectionProps> = ({ jobsheet
           <p className="mt-3 text-sm text-slate-400">
             Who's closer to Lion status? Progress updates live as jobsheets get checked.
           </p>
-        </div>
+        </Reveal>
 
         <div className="flex flex-col gap-4">
           {rows.map((row, idx) => {
@@ -53,7 +54,7 @@ export const LeaderboardSection: React.FC<LeaderboardSectionProps> = ({ jobsheet
             return (
               <div
                 key={row.student}
-                className="bg-slate-950/60 border border-slate-800/80 rounded-2xl p-5"
+                className="tilt-hover bg-slate-950/60 border border-slate-800/80 rounded-2xl p-5"
               >
                 <div className="flex items-center gap-3 mb-3">
                   <span className="flex items-center justify-center w-7 h-7 rounded-full bg-slate-800 text-xs font-bold text-white">
