@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Sparkles, Search, Clock, Plus, ArrowRight } from 'lucide-react';
+import { Sparkles, Search, Clock, ArrowRight } from 'lucide-react';
 import { StudentDashboard } from './StudentDashboard';
 import { ProgressRing } from './ProgressRing';
 import { Student, JobsheetItem } from '../types';
@@ -177,11 +177,6 @@ export const JobsheetPage: React.FC<JobsheetPageProps> = ({
             );
           })}
 
-          {/* Placeholder for future students */}
-          <div className="border-2 border-dashed border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center gap-2 text-slate-600">
-            <Plus className="w-6 h-6" />
-            <span className="text-xs">Add Student</span>
-          </div>
         </div>
 
         <p className="mt-12 text-xs text-slate-600 italic max-w-md mx-auto">🐾 {catFact}</p>
