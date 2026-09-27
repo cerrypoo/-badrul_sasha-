@@ -10,17 +10,21 @@ const STUDENT_NAMES: Record<Student, string> = {
 
 interface JobsheetPageProps {
   jobsheetsByStudent: Record<Student, JobsheetItem[]>;
+  onUpdateStudentJobsheets: (student: Student, jobsheets: JobsheetItem[]) => void;
 }
 
-export const JobsheetPage: React.FC<JobsheetPageProps> = ({ jobsheetsByStudent }) => {
+export const JobsheetPage: React.FC<JobsheetPageProps> = ({
+  jobsheetsByStudent,
+  onUpdateStudentJobsheets,
+}) => {
   const [selected, setSelected] = useState<Student | null>(null);
 
   if (selected) {
     return (
       <StudentDashboard
-        student={selected}
         name={STUDENT_NAMES[selected]}
         jobsheets={jobsheetsByStudent[selected]}
+        onChange={(jobsheets) => onUpdateStudentJobsheets(selected, jobsheets)}
         onBack={() => setSelected(null)}
       />
     );
