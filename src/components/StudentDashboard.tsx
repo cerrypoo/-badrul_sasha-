@@ -1,9 +1,11 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { ArrowLeft, GraduationCap, Search, BookOpen, Upload, Eye, Radio, PawPrint, X, Printer, CalendarClock, MessageSquare } from 'lucide-react';
-import { JobsheetStatus, JobsheetItem } from '../types';
-import { getRank, formatDeadline, isOverdue } from '../utils/jobsheetHelpers';
-
-const TOTAL_JOBSHEETS = 24;
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import {
+  ArrowLeft, GraduationCap, Search, BookOpen, Upload, Eye, Radio, PawPrint, X, Printer,
+  CalendarClock, MessageSquare, ArrowUpDown, FileText, History, Flame, Link2, RotateCcw,
+} from 'lucide-react';
+import { JobsheetStatus, JobsheetItem, Student } from '../types';
+import { getRank, formatDeadline, isOverdue, TOTAL_JOBSHEETS } from '../utils/jobsheetHelpers';
+import { readLog, appendLog, readPersonalNote, savePersonalNote, computeStreak } from '../utils/localLog';
 
 const STATUS_META: Record<JobsheetStatus, { label: string; dot: string; text: string }> = {
   'not-started': { label: 'Not Started', dot: 'bg-slate-500', text: 'text-slate-400' },
@@ -18,17 +20,23 @@ const STATUS_FILTERS: Array<{ value: 'all' | JobsheetStatus; label: string }> = 
   { value: 'checked', label: 'Checked' },
 ];
 
+type SortBy = 'id' | 'status' | 'deadline';
+
 interface StudentDashboardProps {
+  student: Student;
   name: string;
   jobsheets: JobsheetItem[];
   onChange: (jobsheets: JobsheetItem[]) => void;
+  onReset: () => void;
   onBack: () => void;
 }
 
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({
+  student,
   name,
   jobsheets,
   onChange,
+  onReset,
   onBack,
 }) => {
   const setJobsheets = (updater: (prev: JobsheetItem[]) => JobsheetItem[]) => {
@@ -36,74 +44,169 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   };
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | JobsheetStatus>('all');
+  const [sortBy, setSortBy] = useState<SortBy>('id');
+  const [showLog, setShowLog] = useState(false);
+  const [milestoneBurst, setMilestoneBurst] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const [personalNotes, setPersonalNotes] = useState<Record<number, string>>({});
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const liveInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const bulkInputRef = useRef<HTMLInputElement | null>(null);
+  const prevJobsheetsRef = useRef<JobsheetItem[] | null>(null);
+  const [log, setLog] = useState(() => readLog(student));
 
   const checkedCount = jobsheets.filter((j) => j.status === 'checked').length;
   const withPdfCount = jobsheets.filter((j) => j.pdfUrl).length;
   const rank = getRank(checkedCount);
   const progressPct = Math.round((checkedCount / TOTAL_JOBSHEETS) * 100);
+  const streak = computeStreak(log);
+
+  // Load personal notes for this student once
+  useEffect(() => {
+    const notes: Record<number, string> = {};
+    jobsheets.forEach((j) => {
+      const v = readPersonalNote(student, j.id);
+      if (v) notes[j.id] = v;
+    });
+    setPersonalNotes(notes);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [student]);
+
+  // Milestone celebration at 100%
+  useEffect(() => {
+    if (checkedCount === TOTAL_JOBSHEETS && checkedCount > 0) {
+      setMilestoneBurst(true);
+      const t = setTimeout(() => setMilestoneBurst(false), 2000);
+      return () => clearTimeout(t);
+    }
+  }, [checkedCount]);
+
+  // Toast when a lecturer note appears/changes
+  useEffect(() => {
+    const prev = prevJobsheetsRef.current;
+    if (prev) {
+      for (const j of jobsheets) {
+        const prevItem = prev.find((p) => p.id === j.id);
+        if (j.note && j.note !== prevItem?.note) {
+          setToast(`New feedback on Jobsheet ${j.id}`);
+          setTimeout(() => setToast(null), 3500);
+          break;
+        }
+      }
+    }
+    prevJobsheetsRef.current = jobsheets;
+  }, [jobsheets]);
+
+  // Esc key goes back
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onBack();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onBack]);
 
   const filtered = useMemo(() => {
-    return jobsheets.filter((j) => {
+    let list = jobsheets.filter((j) => {
       const matchesSearch = `jobsheet ${j.id}`.includes(search.toLowerCase());
       const matchesStatus = statusFilter === 'all' || j.status === statusFilter;
       return matchesSearch && matchesStatus;
     });
-  }, [jobsheets, search, statusFilter]);
+    list = [...list];
+    if (sortBy === 'status') {
+      const order: Record<JobsheetStatus, number> = { 'not-started': 0, 'in-progress': 1, checked: 2 };
+      list.sort((a, b) => order[a.status] - order[b.status]);
+    } else if (sortBy === 'deadline') {
+      list.sort((a, b) => a.id - b.id); // deadlines are id-derived, so id order == deadline order
+    }
+    return list;
+  }, [jobsheets, search, statusFilter, sortBy]);
+
+  const logAndUpload = (id: number, file: File, kind: 'pdf' | 'live') => {
+    const url = URL.createObjectURL(file);
+    appendLog(student, `${kind === 'pdf' ? 'Uploaded PDF' : 'Uploaded Live'} for Jobsheet ${id}`);
+    setLog(readLog(student));
+    if (kind === 'pdf') {
+      setJobsheets((prev) =>
+        prev.map((j) =>
+          j.id === id
+            ? {
+                ...j,
+                pdfName: file.name,
+                pdfUrl: url,
+                uploadedAt: new Date().toLocaleString('en-US', {
+                  month: 'numeric', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+                }),
+                status: j.status === 'not-started' ? 'in-progress' : j.status,
+              }
+            : j
+        )
+      );
+    } else {
+      setJobsheets((prev) => prev.map((j) => (j.id === id ? { ...j, liveName: file.name, liveUrl: url } : j)));
+    }
+  };
 
   const handleFileChange = (id: number, file: File | null) => {
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setJobsheets((prev) =>
-      prev.map((j) =>
-        j.id === id
-          ? {
-              ...j,
-              pdfName: file.name,
-              pdfUrl: url,
-              uploadedAt: new Date().toLocaleString('en-US', {
-                month: 'numeric',
-                day: 'numeric',
-                year: 'numeric',
-                hour: 'numeric',
-                minute: '2-digit',
-              }),
-              status: j.status === 'not-started' ? 'in-progress' : j.status,
-            }
-          : j
-      )
-    );
+    logAndUpload(id, file, 'pdf');
   };
 
   const handleLiveFileChange = (id: number, file: File | null) => {
     if (!file) return;
-    const url = URL.createObjectURL(file);
-    setJobsheets((prev) =>
-      prev.map((j) => (j.id === id ? { ...j, liveName: file.name, liveUrl: url } : j))
-    );
+    logAndUpload(id, file, 'live');
+  };
+
+  const handleBulkFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const empties = jobsheets.filter((j) => !j.pdfUrl).sort((a, b) => a.id - b.id);
+    const sortedFiles = Array.from(files).sort((a, b) => a.name.localeCompare(b.name));
+    sortedFiles.forEach((file, idx) => {
+      const target = empties[idx];
+      if (target) logAndUpload(target.id, file, 'pdf');
+    });
   };
 
   const handleDeletePdf = (id: number) => {
+    appendLog(student, `Removed PDF from Jobsheet ${id}`);
+    setLog(readLog(student));
     setJobsheets((prev) =>
       prev.map((j) =>
         j.id === id
-          ? {
-              ...j,
-              pdfName: null,
-              pdfUrl: null,
-              uploadedAt: null,
-              status: j.status === 'in-progress' ? 'not-started' : j.status,
-            }
+          ? { ...j, pdfName: null, pdfUrl: null, uploadedAt: null, status: j.status === 'in-progress' ? 'not-started' : j.status }
           : j
       )
     );
   };
 
   const handleDeleteLive = (id: number) => {
-    setJobsheets((prev) =>
-      prev.map((j) => (j.id === id ? { ...j, liveName: null, liveUrl: null } : j))
-    );
+    appendLog(student, `Removed Live file from Jobsheet ${id}`);
+    setLog(readLog(student));
+    setJobsheets((prev) => prev.map((j) => (j.id === id ? { ...j, liveName: null, liveUrl: null } : j)));
+  };
+
+  const handlePersonalNoteChange = (id: number, value: string) => {
+    setPersonalNotes((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handlePersonalNoteBlur = (id: number) => {
+    savePersonalNote(student, id, personalNotes[id] ?? '');
+  };
+
+  const handleCopyLink = (id: number) => {
+    const url = `${window.location.origin}${window.location.pathname}#jobsheet-${student}-${id}`;
+    navigator.clipboard?.writeText(url).then(() => {
+      setToast('Link copied!');
+      setTimeout(() => setToast(null), 2000);
+    });
+  };
+
+  const handleReset = () => {
+    if (window.confirm(`Reset all ${TOTAL_JOBSHEETS} jobsheets for ${name}? This can't be undone.`)) {
+      onReset();
+      appendLog(student, 'Reset all jobsheets');
+      setLog(readLog(student));
+    }
   };
 
   return (
@@ -117,14 +220,36 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           filter: 'invert(1)',
         }}
       />
+
+      {milestoneBurst && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="text-6xl animate-bounce">🏆🦁🎉</div>
+        </div>
+      )}
+
+      {toast && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-800 border border-teal-500/40 text-sm text-white px-4 py-2 rounded-full shadow-lg">
+          {toast}
+        </div>
+      )}
+
       <div className="relative max-w-5xl mx-auto">
-        <button
-          onClick={onBack}
-          className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors mb-6"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back</span>
-        </button>
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={onBack}
+            className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Back <span className="text-slate-600">(Esc)</span></span>
+          </button>
+          <button
+            onClick={handleReset}
+            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-red-400 transition-colors"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            Reset All
+          </button>
+        </div>
 
         {/* Welcome banner */}
         <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 flex items-center justify-between flex-wrap gap-4">
@@ -137,7 +262,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               Manage your jobsheets and upload your PDF submissions here.
             </p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            {streak > 0 && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-orange-500/15 text-orange-300 border border-orange-500/30">
+                <Flame className="w-3.5 h-3.5" />
+                {streak}-day streak
+              </span>
+            )}
             <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full border ${rank.color}`}>
               <span>{rank.emoji}</span>
               {rank.label}
@@ -147,6 +278,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               Student
             </span>
             <button
+              onClick={() => setShowLog((v) => !v)}
+              title="Activity log"
+              className="p-2 text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 rounded-full border border-slate-700 transition-colors"
+            >
+              <History className="w-3.5 h-3.5" />
+            </button>
+            <button
               onClick={() => window.print()}
               title="Print progress report"
               className="p-2 text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-800 rounded-full border border-slate-700 transition-colors"
@@ -155,6 +293,24 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             </button>
           </div>
         </div>
+
+        {showLog && (
+          <div className="mt-4 bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 max-h-48 overflow-y-auto">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Activity Log</h3>
+            {log.length === 0 ? (
+              <p className="text-xs text-slate-500">No activity yet.</p>
+            ) : (
+              <ul className="space-y-1.5">
+                {[...log].reverse().map((entry, i) => (
+                  <li key={i} className="text-xs text-slate-400 flex items-center justify-between gap-2">
+                    <span>{entry.text}</span>
+                    <span className="text-slate-600 shrink-0">{new Date(entry.time).toLocaleString()}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        )}
 
         {/* Stats */}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -186,7 +342,29 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
           </div>
         </div>
 
-        {/* Search + filter */}
+        {/* Bulk upload drop zone */}
+        <div
+          onDragOver={(e) => e.preventDefault()}
+          onDrop={(e) => {
+            e.preventDefault();
+            handleBulkFiles(e.dataTransfer.files);
+          }}
+          className="mt-4 border-2 border-dashed border-slate-700 hover:border-teal-500/60 rounded-2xl p-4 flex items-center justify-center gap-2 text-xs text-slate-400 transition-colors cursor-pointer"
+          onClick={() => bulkInputRef.current?.click()}
+        >
+          <Upload className="w-4 h-4 text-teal-400" />
+          Drag & drop multiple PDFs here, or click to bulk upload into the next empty jobsheets
+          <input
+            ref={bulkInputRef}
+            type="file"
+            accept="application/pdf"
+            multiple
+            className="hidden"
+            onChange={(e) => handleBulkFiles(e.target.files)}
+          />
+        </div>
+
+        {/* Search + filter + sort */}
         <div className="mt-6 flex flex-col sm:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
@@ -209,6 +387,15 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
               </option>
             ))}
           </select>
+          <button
+            onClick={() =>
+              setSortBy((prev) => (prev === 'id' ? 'status' : prev === 'status' ? 'deadline' : 'id'))
+            }
+            className="inline-flex items-center gap-1.5 px-3 py-2.5 text-sm rounded-xl bg-slate-900/50 border border-slate-800 text-slate-300 hover:border-teal-500 transition-colors"
+          >
+            <ArrowUpDown className="w-3.5 h-3.5" />
+            Sort: {sortBy === 'id' ? 'ID' : sortBy === 'status' ? 'Status' : 'Deadline'}
+          </button>
         </div>
 
         {/* Jobsheet list */}
@@ -218,131 +405,155 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             My Jobsheets
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map((j) => {
-              const meta = STATUS_META[j.status];
-              return (
-                <div
-                  key={j.id}
-                  className={`bg-slate-900/50 border rounded-2xl p-5 text-left transition-transform hover:scale-[1.02] ${
-                    isOverdue(j.id, j.status !== 'not-started')
-                      ? 'border-red-500/50'
-                      : 'border-slate-800/80'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-bold text-white">Jobsheet {j.id}</h3>
-                    <span
-                      className={`flex items-center gap-1 text-[10px] font-mono ${
-                        isOverdue(j.id, j.status !== 'not-started') ? 'text-red-400' : 'text-slate-500'
-                      }`}
-                    >
-                      <CalendarClock className="w-3 h-3" />
-                      {formatDeadline(j.id)}
-                    </span>
-                  </div>
-                  <div className="mt-2 flex items-center gap-1.5 text-xs">
-                    <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
-                    <span className={meta.text}>{meta.label}</span>
-                    {isOverdue(j.id, j.status !== 'not-started') && (
-                      <span className="text-[10px] text-red-400 font-semibold">OVERDUE</span>
-                    )}
-                  </div>
-                  <p className="mt-1 text-xs text-slate-500 truncate">
-                    {j.pdfName ? j.pdfName : 'No PDF uploaded'}
-                  </p>
-                  {j.uploadedAt && (
-                    <p className="mt-0.5 text-[11px] text-slate-600">Uploaded: {j.uploadedAt}</p>
-                  )}
-                  {j.note && (
-                    <p className="mt-2 flex items-start gap-1.5 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2">
-                      <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
-                      {j.note}
-                    </p>
-                  )}
-
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
-                    <input
-                      ref={(el) => {
-                        fileInputRefs.current[j.id] = el;
-                      }}
-                      type="file"
-                      accept="application/pdf"
-                      className="hidden"
-                      onChange={(e) => handleFileChange(j.id, e.target.files?.[0] ?? null)}
-                    />
-                    <input
-                      ref={(el) => {
-                        liveInputRefs.current[j.id] = el;
-                      }}
-                      type="file"
-                      accept=".html,.htm,text/html"
-                      className="hidden"
-                      onChange={(e) => handleLiveFileChange(j.id, e.target.files?.[0] ?? null)}
-                    />
-
-                    {j.pdfUrl ? (
-                      <span className="inline-flex items-center rounded-full bg-slate-800 overflow-hidden">
-                        <a
-                          href={j.pdfUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 text-xs font-semibold hover:bg-slate-700 text-slate-200 transition-colors"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                          View PDF
-                        </a>
-                        <button
-                          onClick={() => handleDeletePdf(j.id)}
-                          aria-label="Delete PDF"
-                          className="px-2 py-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700 transition-colors"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
+          {filtered.length === 0 ? (
+            <div className="py-16 flex flex-col items-center gap-2 text-center">
+              <FileText className="w-8 h-8 text-slate-700" />
+              <p className="text-sm text-slate-500">No jobsheets match your filters.</p>
+              <button
+                onClick={() => { setSearch(''); setStatusFilter('all'); }}
+                className="text-xs text-teal-400 hover:text-teal-300 underline"
+              >
+                Clear filters
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filtered.map((j) => {
+                const meta = STATUS_META[j.status];
+                const overdue = isOverdue(j.id, j.status !== 'not-started');
+                return (
+                  <div
+                    key={j.id}
+                    className={`bg-slate-900/50 border rounded-2xl p-5 text-left transition-transform hover:scale-[1.02] ${
+                      overdue ? 'border-red-500/50' : 'border-slate-800/80'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className={`w-8 h-8 rounded-lg flex items-center justify-center ${j.pdfUrl ? 'bg-teal-500/15 text-teal-400' : 'bg-slate-800 text-slate-600'}`}>
+                          <FileText className="w-4 h-4" />
+                        </span>
+                        <h3 className="text-sm font-bold text-white">Jobsheet {j.id}</h3>
+                      </div>
+                      <span className={`flex items-center gap-1 text-[10px] font-mono ${overdue ? 'text-red-400' : 'text-slate-500'}`}>
+                        <CalendarClock className="w-3 h-3" />
+                        {formatDeadline(j.id)}
                       </span>
-                    ) : (
-                      <button
-                        onClick={() => fileInputRefs.current[j.id]?.click()}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-teal-600/80 hover:bg-teal-500 text-white transition-colors"
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                        Upload PDF
-                      </button>
+                    </div>
+                    <div className="mt-2 flex items-center gap-1.5 text-xs">
+                      <span className={`w-2 h-2 rounded-full ${meta.dot}`} />
+                      <span className={meta.text}>{meta.label}</span>
+                      {overdue && <span className="text-[10px] text-red-400 font-semibold">OVERDUE</span>}
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500 truncate">
+                      {j.pdfName ? j.pdfName : 'No PDF uploaded'}
+                    </p>
+                    {j.uploadedAt && (
+                      <p className="mt-0.5 text-[11px] text-slate-600">Uploaded: {j.uploadedAt}</p>
+                    )}
+                    {j.note && (
+                      <p className="mt-2 flex items-start gap-1.5 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2">
+                        <MessageSquare className="w-3 h-3 mt-0.5 shrink-0" />
+                        {j.note}
+                      </p>
                     )}
 
-                    {j.liveUrl ? (
-                      <span className="inline-flex items-center rounded-full bg-slate-800 overflow-hidden">
-                        <a
-                          href={j.liveUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 text-xs font-semibold hover:bg-slate-700 text-slate-200 transition-colors"
+                    <input
+                      type="text"
+                      value={personalNotes[j.id] ?? ''}
+                      onChange={(e) => handlePersonalNoteChange(j.id, e.target.value)}
+                      onBlur={() => handlePersonalNoteBlur(j.id)}
+                      placeholder="Personal reminder (only you see this)"
+                      className="mt-2 w-full bg-slate-950/60 border border-slate-800 rounded-lg px-2 py-1 text-[11px] text-slate-300 placeholder:text-slate-600 focus:outline-none focus:border-slate-600"
+                    />
+
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <input
+                        ref={(el) => { fileInputRefs.current[j.id] = el; }}
+                        type="file"
+                        accept="application/pdf"
+                        className="hidden"
+                        onChange={(e) => handleFileChange(j.id, e.target.files?.[0] ?? null)}
+                      />
+                      <input
+                        ref={(el) => { liveInputRefs.current[j.id] = el; }}
+                        type="file"
+                        accept=".html,.htm,text/html"
+                        className="hidden"
+                        onChange={(e) => handleLiveFileChange(j.id, e.target.files?.[0] ?? null)}
+                      />
+
+                      {j.pdfUrl ? (
+                        <span className="inline-flex items-center rounded-full bg-slate-800 overflow-hidden">
+                          <a
+                            href={j.pdfUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 text-xs font-semibold hover:bg-slate-700 text-slate-200 transition-colors"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                            View PDF
+                          </a>
+                          <button
+                            onClick={() => handleDeletePdf(j.id)}
+                            aria-label="Delete PDF"
+                            className="px-2 py-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => fileInputRefs.current[j.id]?.click()}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-teal-600/80 hover:bg-teal-500 text-white transition-colors"
+                        >
+                          <Upload className="w-3.5 h-3.5" />
+                          Upload PDF
+                        </button>
+                      )}
+
+                      {j.liveUrl ? (
+                        <span className="inline-flex items-center rounded-full bg-slate-800 overflow-hidden">
+                          <a
+                            href={j.liveUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 pl-3 pr-2 py-1.5 text-xs font-semibold hover:bg-slate-700 text-slate-200 transition-colors"
+                          >
+                            <Radio className="w-3.5 h-3.5" />
+                            View Live
+                          </a>
+                          <button
+                            onClick={() => handleDeleteLive(j.id)}
+                            aria-label="Delete live recording"
+                            className="px-2 py-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700 transition-colors"
+                          >
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => liveInputRefs.current[j.id]?.click()}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-amber-600/80 hover:bg-amber-500 text-white transition-colors"
                         >
                           <Radio className="w-3.5 h-3.5" />
-                          View Live
-                        </a>
-                        <button
-                          onClick={() => handleDeleteLive(j.id)}
-                          aria-label="Delete live recording"
-                          className="px-2 py-1.5 text-slate-400 hover:text-red-400 hover:bg-slate-700 transition-colors"
-                        >
-                          <X className="w-3.5 h-3.5" />
+                          Upload Live
                         </button>
-                      </span>
-                    ) : (
+                      )}
+
                       <button
-                        onClick={() => liveInputRefs.current[j.id]?.click()}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-full bg-amber-600/80 hover:bg-amber-500 text-white transition-colors"
+                        onClick={() => handleCopyLink(j.id)}
+                        title="Copy link to this jobsheet"
+                        className="p-1.5 text-slate-500 hover:text-teal-400 bg-slate-800/60 hover:bg-slate-800 rounded-full transition-colors"
                       >
-                        <Radio className="w-3.5 h-3.5" />
-                        Upload Live
+                        <Link2 className="w-3.5 h-3.5" />
                       </button>
-                    )}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
     </section>

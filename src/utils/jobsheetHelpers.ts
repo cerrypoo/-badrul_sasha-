@@ -1,4 +1,19 @@
+import { JobsheetItem } from '../types';
+
 const COURSE_START = new Date('2026-09-01T00:00:00');
+export const TOTAL_JOBSHEETS = 24;
+
+export const createEmptyJobsheets = (): JobsheetItem[] =>
+  Array.from({ length: TOTAL_JOBSHEETS }, (_, i) => ({
+    id: i + 1,
+    status: 'not-started',
+    pdfName: null,
+    pdfUrl: null,
+    uploadedAt: null,
+    liveName: null,
+    liveUrl: null,
+    note: null,
+  }));
 
 /** Deterministic demo deadline: one jobsheet due every 5 days from course start. */
 export const getDeadline = (id: number): Date => {

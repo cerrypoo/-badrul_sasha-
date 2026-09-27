@@ -16,21 +16,7 @@ import { RecentActivitySection } from './components/RecentActivitySection';
 import { TechStackSection } from './components/TechStackSection';
 import { PawCursorTrail } from './components/PawCursorTrail';
 import { playMeow } from './utils/meow';
-
-const TOTAL_JOBSHEETS = 24;
-
-const createInitialJobsheets = (): JobsheetItem[] =>
-  Array.from({ length: TOTAL_JOBSHEETS }, (_, i) => ({
-    id: i + 1,
-    status: 'not-started',
-    pdfName: null,
-    pdfUrl: null,
-    uploadedAt: null,
-    liveName: null,
-    liveUrl: null,
-    note: null,
-  }));
-
+import { createEmptyJobsheets } from './utils/jobsheetHelpers';
 
 export default function App() {
   const [themeMode, setThemeMode] = useState<ThemeMode>('day');
@@ -39,8 +25,8 @@ export default function App() {
   const [page, setPage] = useState<'home' | 'jobsheet' | 'library'>('home');
   const [pendingScrollId, setPendingScrollId] = useState<string | null>(null);
   const [jobsheetsByStudent, setJobsheetsByStudent] = useState<Record<Student, JobsheetItem[]>>({
-    sasha: createInitialJobsheets(),
-    badrul: createInitialJobsheets(),
+    sasha: createEmptyJobsheets(),
+    badrul: createEmptyJobsheets(),
   });
 
   const [scrollPct, setScrollPct] = useState(0);
@@ -48,6 +34,20 @@ export default function App() {
   const updateStudentJobsheets = (student: Student, jobsheets: JobsheetItem[]) => {
     setJobsheetsByStudent((prev) => ({ ...prev, [student]: jobsheets }));
   };
+
+  const resetStudentJobsheets = (student: Student) => {
+    setJobsheetsByStudent((prev) => ({ ...prev, [student]: createEmptyJobsheets() }));
+  };
+
+  // Deep link: #jobsheet-<student>-<id> opens the Jobsheet page for that student
+  const [deepLinkStudent, setDeepLinkStudent] = useState<Student | null>(null);
+  useEffect(() => {
+    const match = window.location.hash.match(/^#jobsheet-(sasha|badrul)/);
+    if (match) {
+      setPage('jobsheet');
+      setDeepLinkStudent(match[1] as Student);
+    }
+  }, []);
 
   const totalChecked =
     jobsheetsByStudent.sasha.filter((j) => j.status === 'checked').length +
@@ -170,6 +170,8 @@ export default function App() {
           <JobsheetPage
             jobsheetsByStudent={jobsheetsByStudent}
             onUpdateStudentJobsheets={updateStudentJobsheets}
+            onResetStudentJobsheets={resetStudentJobsheets}
+            initialStudent={deepLinkStudent}
           />
         ) : (
           <LibraryPage
