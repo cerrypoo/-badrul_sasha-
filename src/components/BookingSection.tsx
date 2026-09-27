@@ -33,12 +33,13 @@ export const BookingSection: React.FC = () => {
     setTilt((prev) => ({ ...prev, [name]: { x: relX * MAX_TILT, y: -relY * MAX_TILT } }));
   };
 
-  const handleMouseLeave = (name: string) => {
-    setTilt((prev) => ({ ...prev, [name]: { x: 0, y: 0 } }));
+  const handleMouseEnter = (name: string) => {
+    setFlipped((prev) => ({ ...prev, [name]: true }));
   };
 
-  const toggleFlip = (name: string) => {
-    setFlipped((prev) => ({ ...prev, [name]: !prev[name] }));
+  const handleMouseLeave = (name: string) => {
+    setFlipped((prev) => ({ ...prev, [name]: false }));
+    setTilt((prev) => ({ ...prev, [name]: { x: 0, y: 0 } }));
   };
 
   return (
@@ -71,8 +72,8 @@ export const BookingSection: React.FC = () => {
             return (
             <div
               key={s.name}
-              onClick={() => toggleFlip(s.name)}
               onMouseMove={handleMouseMove(s.name)}
+              onMouseEnter={() => handleMouseEnter(s.name)}
               onMouseLeave={() => handleMouseLeave(s.name)}
               className="h-[420px] cursor-pointer [perspective:1200px]"
             >
@@ -82,24 +83,18 @@ export const BookingSection: React.FC = () => {
                   transform: `rotateX(${t.y}deg) rotateY(${(flipped[s.name] ? 180 : 0) + t.x}deg)`,
                 }}
               >
-                {/* Front: full photo, layers pop toward the viewer on hover */}
-                <div
-                  className="absolute inset-0 rounded-3xl overflow-hidden shadow-2xl [backface-visibility:hidden] [transform-style:preserve-3d]"
-                >
+                {/* Front: full photo */}
+                <div className="absolute inset-0 rounded-3xl overflow-hidden shadow-2xl [backface-visibility:hidden]">
                   <img
                     src={s.photo}
                     alt={s.name}
                     referrerPolicy="no-referrer"
-                    className="w-full h-full object-cover object-center transition-transform duration-500"
-                    style={{ transform: `translateZ(10px) scale(${1 + Math.abs(t.x) / 200})` }}
+                    className="w-full h-full object-cover object-center"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                  <div
-                    className="absolute bottom-0 left-0 right-0 p-6 text-left transition-transform duration-500"
-                    style={{ transform: `translateZ(60px)` }}
-                  >
-                    <h3 className="text-lg font-bold text-white drop-shadow-lg">{s.name}</h3>
-                    <span className="inline-block mt-1 px-3 py-1 text-xs font-semibold rounded-full bg-teal-600/80 text-white shadow-lg">
+                  <div className="absolute bottom-0 left-0 right-0 p-6 text-left">
+                    <h3 className="text-lg font-bold text-white">{s.name}</h3>
+                    <span className="inline-block mt-1 px-3 py-1 text-xs font-semibold rounded-full bg-teal-600/80 text-white">
                       {s.tag}
                     </span>
                   </div>
