@@ -29,7 +29,7 @@ export const FaqTestimonialSection: React.FC = () => {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
 
   return (
-    <section className="w-full py-16 px-4 sm:px-6 lg:px-8 bg-slate-950 border-t border-slate-800">
+    <section id="faq" className="w-full py-16 px-4 sm:px-6 lg:px-8 bg-slate-950 border-t border-slate-800">
       <div className="max-w-4xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12">
         {/* FAQ */}
         <div>

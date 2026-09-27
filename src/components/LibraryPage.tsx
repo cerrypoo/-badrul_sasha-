@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import {
   Sparkles, FileText, Eye, Radio, PawPrint, Bell, MessageSquare,
-  LayoutGrid, List, Undo2, CheckCheck, Download, ClipboardCheck,
+  LayoutGrid, List, Undo2, CheckCheck, Download, ClipboardCheck, BarChart3,
 } from 'lucide-react';
 import { Student, JobsheetItem } from '../types';
 import { playPurr } from '../utils/meow';
 import { logReview, countReviewedToday } from '../utils/localLog';
+import { TOTAL_JOBSHEETS } from '../utils/jobsheetHelpers';
+import { useToast } from './ToastProvider';
 
 const STUDENT_NAMES: Record<Student, string> = {
   sasha: 'Sasha',
@@ -38,6 +40,7 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [search, setSearch] = useState('');
   const [reviewedToday, setReviewedToday] = useState(countReviewedToday);
+  const { showToast } = useToast();
 
   const allComplete = (Object.keys(STUDENT_NAMES) as Student[]).flatMap((s) =>
     jobsheetsByStudent[s].filter((j) => j.pdfUrl && j.liveUrl)
@@ -108,7 +111,16 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
     a.download = 'jobsheet-review-summary.txt';
     a.click();
     URL.revokeObjectURL(url);
+    showToast('Report downloaded');
   };
+
+  const perJobsheetChecked = Array.from({ length: TOTAL_JOBSHEETS }, (_, i) => {
+    const id = i + 1;
+    const count = (Object.keys(STUDENT_NAMES) as Student[]).filter(
+      (s) => jobsheetsByStudent[s].find((j) => j.id === id)?.status === 'checked'
+    ).length;
+    return { id, count };
+  });
 
   const pendingReviewCount = allComplete.filter((j) => j.status !== 'checked').length;
 
@@ -174,6 +186,26 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
               <div className="text-xl font-bold font-mono text-white">{reviewedToday}</div>
               <p className="text-xs text-slate-400">Reviewed today</p>
             </div>
+          </div>
+        </div>
+
+        {/* Per-jobsheet completion chart */}
+        <div className="bg-slate-900/50 border border-slate-800/80 rounded-2xl p-4 mb-6">
+          <div className="flex items-center gap-2 text-xs text-slate-400 mb-3">
+            <BarChart3 className="w-3.5 h-3.5 text-teal-400" />
+            <span>Checked count per Jobsheet (out of 2 students)</span>
+          </div>
+          <div className="flex items-end gap-1 h-16">
+            {perJobsheetChecked.map(({ id, count }) => (
+              <div key={id} className="flex-1 flex flex-col items-center justify-end gap-1" title={`Jobsheet ${id}: ${count}/2 checked`}>
+                <div
+                  className={`w-full rounded-sm transition-all ${
+                    count === 2 ? 'bg-emerald-400' : count === 1 ? 'bg-amber-400' : 'bg-slate-800'
+                  }`}
+                  style={{ height: `${(count / 2) * 100}%`, minHeight: count > 0 ? '4px' : '2px' }}
+                />
+              </div>
+            ))}
           </div>
         </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ThemeMode, ConfirmedBooking, Student, JobsheetItem } from './types';
+import { ThemeMode, Student, JobsheetItem } from './types';
 import { preloadVideos } from './services/videoCache';
 import { Navbar } from './components/Navbar';
 import { HeroVideoBackground } from './components/HeroVideoBackground';
@@ -7,7 +7,6 @@ import { HeroSection } from './components/HeroSection';
 import { BookingSection } from './components/BookingSection';
 import { GallerySection } from './components/GallerySection';
 import { Footer } from './components/Footer';
-import { BookingConfirmationModal } from './components/BookingConfirmationModal';
 import { JobsheetPage } from './components/JobsheetPage';
 import { LibraryPage } from './components/LibraryPage';
 import { LeaderboardSection } from './components/LeaderboardSection';
@@ -15,13 +14,23 @@ import { FaqTestimonialSection } from './components/FaqTestimonialSection';
 import { RecentActivitySection } from './components/RecentActivitySection';
 import { TechStackSection } from './components/TechStackSection';
 import { PawCursorTrail } from './components/PawCursorTrail';
+import { CommandPalette } from './components/CommandPalette';
+import { BackToTop } from './components/BackToTop';
+import { ToastProvider } from './components/ToastProvider';
 import { playMeow } from './utils/meow';
 import { createEmptyJobsheets } from './utils/jobsheetHelpers';
 
 export default function App() {
+  return (
+    <ToastProvider>
+      <AppContent />
+    </ToastProvider>
+  );
+}
+
+function AppContent() {
   const [themeMode, setThemeMode] = useState<ThemeMode>('day');
   const [activeSection, setActiveSection] = useState<string>('hero');
-  const [confirmedBooking, setConfirmedBooking] = useState<ConfirmedBooking | null>(null);
   const [page, setPage] = useState<'home' | 'jobsheet' | 'library'>('home');
   const [pendingScrollId, setPendingScrollId] = useState<string | null>(null);
   const [jobsheetsByStudent, setJobsheetsByStudent] = useState<Record<Student, JobsheetItem[]>>({
@@ -133,10 +142,6 @@ export default function App() {
     }
   };
 
-  const handleBookingSuccess = (booking: ConfirmedBooking) => {
-    setConfirmedBooking(booking);
-  };
-
   const handleNavigateSection = (id: string) => {
     setPage('home');
     setPendingScrollId(id);
@@ -157,10 +162,15 @@ export default function App() {
       <div className="min-h-screen bg-slate-950 text-slate-100">
         <div className="fixed top-0 left-0 h-0.5 bg-teal-400 z-[60] transition-all" style={{ width: `${scrollPct}%` }} />
         <PawCursorTrail />
+        <BackToTop />
+        <CommandPalette
+          onNavigateSection={handleNavigateSection}
+          onNavigateJobsheet={handleNavigateJobsheet}
+          onNavigateLibrary={handleNavigateLibrary}
+        />
         <Navbar
           themeMode={themeMode}
           onToggleTheme={handleToggleTheme}
-          onOpenBooking={handleOpenBooking}
           activeSection={page}
           onNavigateJobsheet={handleNavigateJobsheet}
           onNavigateLibrary={handleNavigateLibrary}
@@ -192,6 +202,12 @@ export default function App() {
     >
       <div className="fixed top-0 left-0 h-0.5 bg-teal-400 z-[60] transition-all" style={{ width: `${scrollPct}%` }} />
       <PawCursorTrail />
+      <BackToTop />
+      <CommandPalette
+        onNavigateSection={handleNavigateSection}
+        onNavigateJobsheet={handleNavigateJobsheet}
+        onNavigateLibrary={handleNavigateLibrary}
+      />
 
       {/* 1. Hero Section with Optimized Dual-Video Background */}
       <HeroVideoBackground themeMode={themeMode} onToggleTheme={handleToggleTheme}>
@@ -199,7 +215,6 @@ export default function App() {
         <Navbar
           themeMode={themeMode}
           onToggleTheme={handleToggleTheme}
-          onOpenBooking={handleOpenBooking}
           activeSection={activeSection}
           onNavigateJobsheet={handleNavigateJobsheet}
           onNavigateLibrary={handleNavigateLibrary}
@@ -235,12 +250,6 @@ export default function App() {
 
       {/* 6. Footer */}
       <Footer onNavigateSection={handleNavigateSection} onNavigateJobsheet={handleNavigateJobsheet} onNavigateLibrary={handleNavigateLibrary} />
-
-      {/* 7. Booking Confirmation Modal */}
-      <BookingConfirmationModal
-        booking={confirmedBooking}
-        onClose={() => setConfirmedBooking(null)}
-      />
     </div>
   );
 }

@@ -24,7 +24,7 @@ export const LeaderboardSection: React.FC<LeaderboardSectionProps> = ({ jobsheet
     .sort((a, b) => b.checked - a.checked);
 
   return (
-    <section className="relative w-full py-16 px-4 sm:px-6 lg:px-8 bg-slate-900 border-t border-slate-800 overflow-hidden">
+    <section id="leaderboard" className="relative w-full py-16 px-4 sm:px-6 lg:px-8 bg-slate-900 border-t border-slate-800 overflow-hidden">
       <div
         className="absolute inset-0 opacity-[0.06] pointer-events-none"
         style={{

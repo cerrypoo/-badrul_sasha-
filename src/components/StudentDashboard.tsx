@@ -7,6 +7,7 @@ import { JobsheetStatus, JobsheetItem, Student } from '../types';
 import { getRank, formatDeadline, isOverdue, TOTAL_JOBSHEETS } from '../utils/jobsheetHelpers';
 import { readLog, appendLog, readPersonalNote, savePersonalNote, computeStreak } from '../utils/localLog';
 import { lock as lockStudent } from '../utils/auth';
+import { useToast } from './ToastProvider';
 
 const STATUS_META: Record<JobsheetStatus, { label: string; dot: string; text: string }> = {
   'not-started': { label: 'Not Started', dot: 'bg-slate-500', text: 'text-slate-400' },
@@ -48,7 +49,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const [sortBy, setSortBy] = useState<SortBy>('id');
   const [showLog, setShowLog] = useState(false);
   const [milestoneBurst, setMilestoneBurst] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
+  const { showToast } = useToast();
   const [personalNotes, setPersonalNotes] = useState<Record<number, string>>({});
   const fileInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
   const liveInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
@@ -86,8 +87,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const prevPdfCountRef = useRef<number | null>(null);
   useEffect(() => {
     if (prevPdfCountRef.current === 0 && withPdfCount === 1) {
-      setToast('First jobsheet uploaded! 🐾');
-      setTimeout(() => setToast(null), 2500);
+      showToast('First jobsheet uploaded! 🐾');
     }
     prevPdfCountRef.current = withPdfCount;
   }, [withPdfCount]);
@@ -99,8 +99,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       for (const j of jobsheets) {
         const prevItem = prev.find((p) => p.id === j.id);
         if (j.note && j.note !== prevItem?.note) {
-          setToast(`New feedback on Jobsheet ${j.id}`);
-          setTimeout(() => setToast(null), 3500);
+          showToast(`New feedback on Jobsheet ${j.id}`);
           break;
         }
       }
@@ -207,8 +206,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   const handleCopyLink = (id: number) => {
     const url = `${window.location.origin}${window.location.pathname}#jobsheet-${student}-${id}`;
     navigator.clipboard?.writeText(url).then(() => {
-      setToast('Link copied!');
-      setTimeout(() => setToast(null), 2000);
+      showToast('Link copied!');
     });
   };
 
@@ -235,12 +233,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
       {milestoneBurst && (
         <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
           <div className="text-6xl animate-bounce">🏆🦁🎉</div>
-        </div>
-      )}
-
-      {toast && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-slate-800 border border-teal-500/40 text-sm text-white px-4 py-2 rounded-full shadow-lg">
-          {toast}
         </div>
       )}
 

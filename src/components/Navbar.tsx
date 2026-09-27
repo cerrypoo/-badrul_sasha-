@@ -5,7 +5,6 @@ import { ThemeMode } from '../types';
 interface NavbarProps {
   themeMode: ThemeMode;
   onToggleTheme: () => void;
-  onOpenBooking: () => void;
   activeSection: string;
   onNavigateJobsheet: () => void;
   onNavigateLibrary: () => void;
@@ -15,7 +14,6 @@ interface NavbarProps {
 export const Navbar: React.FC<NavbarProps> = ({
   themeMode,
   onToggleTheme,
-  onOpenBooking,
   activeSection,
   onNavigateJobsheet,
   onNavigateLibrary,
