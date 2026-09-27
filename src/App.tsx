@@ -144,18 +144,31 @@ function AppContent() {
   };
 
   const [transitioning, setTransitioning] = useState(false);
+  const [transitionTarget, setTransitionTarget] = useState<'home' | 'jobsheet' | 'library'>('home');
+  const [transitionDuration, setTransitionDuration] = useState(4000);
+  const [hasShownLoading, setHasShownLoading] = useState(false);
+
+  const PAGE_LABELS: Record<'home' | 'jobsheet' | 'library', string> = {
+    home: 'Home',
+    jobsheet: 'Jobsheet Portal',
+    library: 'Library',
+  };
 
   const goToPage = (target: 'home' | 'jobsheet' | 'library', after: () => void) => {
     if (page === target) {
       after();
       return;
     }
+    const duration = hasShownLoading ? 1500 : 4000;
+    setTransitionTarget(target);
+    setTransitionDuration(duration);
     setTransitioning(true);
     setTimeout(() => {
       setPage(target);
       after();
       setTransitioning(false);
-    }, 4000);
+      setHasShownLoading(true);
+    }, duration);
   };
 
   const handleNavigateSection = (id: string) => {
@@ -171,7 +184,7 @@ function AppContent() {
   };
 
   if (transitioning) {
-    return <PageLoadingScreen />;
+    return <PageLoadingScreen destination={PAGE_LABELS[transitionTarget]} duration={transitionDuration} />;
   }
 
   if (page === 'jobsheet' || page === 'library') {
