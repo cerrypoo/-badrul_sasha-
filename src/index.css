@@ -97,6 +97,21 @@
   box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
 }
 
+/* Walking paw-print trail, used on the page loading screen */
+@keyframes pawStep {
+  0%, 100% {
+    opacity: 0;
+    transform: translateY(var(--paw-ty, 0)) rotate(var(--paw-rot, 0deg)) scale(0.5);
+  }
+  35%, 65% {
+    opacity: 1;
+    transform: translateY(var(--paw-ty, 0)) rotate(var(--paw-rot, 0deg)) scale(1);
+  }
+}
+.paw-step {
+  animation: pawStep 1.75s ease-in-out infinite;
+}
+
 @keyframes pawSpin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }

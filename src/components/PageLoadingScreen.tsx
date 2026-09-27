@@ -58,27 +58,23 @@ export const PageLoadingScreen: React.FC<PageLoadingScreenProps> = ({ destinatio
         }}
       />
 
-      <video
-        src="videos/page_loading.mp4"
-        autoPlay
-        muted
-        playsInline
-        className="relative w-40 h-40 sm:w-56 sm:h-56 object-contain"
-      />
-
-      <div className="relative flex items-center gap-2 mt-2">
-        {[0, 1, 2].map((i) => (
+      <div className="relative flex items-end h-16 gap-3">
+        {[0, 1, 2, 3, 4].map((i) => (
           <span
             key={i}
-            className="text-lg animate-bounce"
-            style={{ animationDelay: `${i * 0.15}s` }}
+            className="paw-step text-3xl"
+            style={{
+              animationDelay: `${i * 0.35}s`,
+              ['--paw-ty' as string]: i % 2 === 0 ? '0px' : '14px',
+              ['--paw-rot' as string]: i % 2 === 0 ? '-8deg' : '8deg',
+            } as React.CSSProperties}
           >
             🐾
           </span>
         ))}
       </div>
 
-      <p className="relative mt-3 text-sm text-white/80">
+      <p className="relative mt-6 text-sm text-white/80">
         {tagline}
       </p>
       <p className="relative text-xs text-teal-400 uppercase tracking-widest mt-1">
