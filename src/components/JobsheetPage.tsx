@@ -2,9 +2,11 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Sparkles, Search, Clock, ArrowRight } from 'lucide-react';
 import { StudentDashboard } from './StudentDashboard';
 import { ProgressRing } from './ProgressRing';
+import { PinGate } from './PinGate';
 import { Student, JobsheetItem } from '../types';
 import { getRank } from '../utils/jobsheetHelpers';
 import { playMeow } from '../utils/meow';
+import { isUnlocked } from '../utils/auth';
 
 const STUDENT_NAMES: Record<Student, string> = {
   sasha: 'Sasha',
@@ -43,7 +45,12 @@ export const JobsheetPage: React.FC<JobsheetPageProps> = ({
   onResetStudentJobsheets,
   initialStudent,
 }) => {
-  const [selected, setSelected] = useState<Student | null>(initialStudent ?? null);
+  const [selected, setSelected] = useState<Student | null>(
+    initialStudent && isUnlocked(initialStudent) ? initialStudent : null
+  );
+  const [pendingAuth, setPendingAuth] = useState<Student | null>(
+    initialStudent && !isUnlocked(initialStudent) ? initialStudent : null
+  );
   const [search, setSearch] = useState('');
   const lastHover = useRef(0);
   const catFact = useMemo(() => CAT_FACTS[Math.floor(Math.random() * CAT_FACTS.length)], []);
@@ -54,7 +61,11 @@ export const JobsheetPage: React.FC<JobsheetPageProps> = ({
 
   const selectStudent = (student: Student) => {
     localStorage.setItem(LAST_STUDENT_KEY, student);
-    setSelected(student);
+    if (isUnlocked(student)) {
+      setSelected(student);
+    } else {
+      setPendingAuth(student);
+    }
   };
 
   const handleHoverMeow = () => {
@@ -63,6 +74,20 @@ export const JobsheetPage: React.FC<JobsheetPageProps> = ({
     lastHover.current = now;
     playMeow();
   };
+
+  if (pendingAuth) {
+    return (
+      <PinGate
+        student={pendingAuth}
+        name={STUDENT_NAMES[pendingAuth]}
+        onUnlocked={() => {
+          setSelected(pendingAuth);
+          setPendingAuth(null);
+        }}
+        onCancel={() => setPendingAuth(null)}
+      />
+    );
+  }
 
   if (selected) {
     return (

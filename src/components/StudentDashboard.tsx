@@ -1,11 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, GraduationCap, Search, BookOpen, Upload, Eye, Radio, PawPrint, X, Printer,
-  CalendarClock, MessageSquare, ArrowUpDown, FileText, History, Flame, Link2, RotateCcw,
+  CalendarClock, MessageSquare, ArrowUpDown, FileText, History, Flame, Link2, RotateCcw, Lock,
 } from 'lucide-react';
 import { JobsheetStatus, JobsheetItem, Student } from '../types';
 import { getRank, formatDeadline, isOverdue, TOTAL_JOBSHEETS } from '../utils/jobsheetHelpers';
 import { readLog, appendLog, readPersonalNote, savePersonalNote, computeStreak } from '../utils/localLog';
+import { lock as lockStudent } from '../utils/auth';
 
 const STATUS_META: Record<JobsheetStatus, { label: string; dot: string; text: string }> = {
   'not-started': { label: 'Not Started', dot: 'bg-slate-500', text: 'text-slate-400' },
@@ -252,13 +253,23 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Back <span className="text-slate-600">(Esc)</span></span>
           </button>
-          <button
-            onClick={handleReset}
-            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-red-400 transition-colors"
-          >
-            <RotateCcw className="w-3.5 h-3.5" />
-            Reset All
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => { lockStudent(student); onBack(); }}
+              title="Lock this dashboard on this device"
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-amber-400 transition-colors"
+            >
+              <Lock className="w-3.5 h-3.5" />
+              Lock
+            </button>
+            <button
+              onClick={handleReset}
+              className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-red-400 transition-colors"
+            >
+              <RotateCcw className="w-3.5 h-3.5" />
+              Reset All
+            </button>
+          </div>
         </div>
 
         {/* Welcome banner */}
