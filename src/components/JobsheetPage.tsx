@@ -168,16 +168,14 @@ export const JobsheetPage: React.FC<JobsheetPageProps> = ({
                 onMouseEnter={handleHoverMeow}
                 className="group relative overflow-hidden bg-slate-900/50 border border-slate-800/80 hover:border-teal-500/60 rounded-2xl p-8 transition-colors text-center"
               >
-                <div className="flex items-center justify-center gap-4 mb-3">
+                <div className="relative w-20 h-20 mx-auto mb-3">
+                  <ProgressRing pct={pct} size={80} stroke={4} className="absolute inset-0" />
                   <img
                     src={STUDENT_PHOTOS[student]}
                     alt={STUDENT_NAMES[student]}
                     referrerPolicy="no-referrer"
-                    className="w-14 h-14 rounded-full object-cover border-2 border-teal-500/50"
+                    className="absolute inset-0 m-auto w-14 h-14 rounded-full object-cover"
                   />
-                  <div className="text-teal-400">
-                    <ProgressRing pct={pct} />
-                  </div>
                 </div>
                 <h3 className="text-3xl font-bold text-white">{STUDENT_NAMES[student]}</h3>
                 <span className={`mt-1 inline-flex items-center gap-1 px-2.5 py-0.5 text-[11px] font-semibold rounded-full border ${rank.color}`}>
