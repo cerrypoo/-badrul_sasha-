@@ -20,11 +20,26 @@ const STUDENTS = [
   },
 ];
 
+const MAX_TILT = 10;
+
 export const BookingSection: React.FC = () => {
   const [flipped, setFlipped] = useState<Record<string, boolean>>({});
+  const [tilt, setTilt] = useState<Record<string, { x: number; y: number }>>({});
 
-  const toggleFlip = (name: string) => {
-    setFlipped((prev) => ({ ...prev, [name]: !prev[name] }));
+  const handleMouseMove = (name: string) => (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relX = (e.clientX - rect.left) / rect.width - 0.5;
+    const relY = (e.clientY - rect.top) / rect.height - 0.5;
+    setTilt((prev) => ({ ...prev, [name]: { x: relX * MAX_TILT, y: -relY * MAX_TILT } }));
+  };
+
+  const handleMouseEnter = (name: string) => {
+    setFlipped((prev) => ({ ...prev, [name]: true }));
+  };
+
+  const handleMouseLeave = (name: string) => {
+    setFlipped((prev) => ({ ...prev, [name]: false }));
+    setTilt((prev) => ({ ...prev, [name]: { x: 0, y: 0 } }));
   };
 
   return (
@@ -52,15 +67,21 @@ export const BookingSection: React.FC = () => {
         </p>
 
         <div className="mt-10 grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {STUDENTS.map((s) => (
+          {STUDENTS.map((s) => {
+            const t = tilt[s.name] ?? { x: 0, y: 0 };
+            return (
             <div
               key={s.name}
-              onClick={() => toggleFlip(s.name)}
+              onMouseMove={handleMouseMove(s.name)}
+              onMouseEnter={() => handleMouseEnter(s.name)}
+              onMouseLeave={() => handleMouseLeave(s.name)}
               className="h-[420px] cursor-pointer [perspective:1200px]"
             >
               <div
-                className="relative w-full h-full transition-transform duration-700 [transform-style:preserve-3d]"
-                style={{ transform: flipped[s.name] ? 'rotateY(180deg)' : 'rotateY(0deg)' }}
+                className="relative w-full h-full transition-transform duration-500 ease-out [transform-style:preserve-3d]"
+                style={{
+                  transform: `rotateX(${t.y}deg) rotateY(${(flipped[s.name] ? 180 : 0) + t.x}deg)`,
+                }}
               >
                 {/* Front: full photo */}
                 <div className="absolute inset-0 rounded-3xl overflow-hidden shadow-2xl [backface-visibility:hidden]">
@@ -99,7 +120,8 @@ export const BookingSection: React.FC = () => {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
     </section>
