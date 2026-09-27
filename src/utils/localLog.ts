@@ -36,6 +36,28 @@ export const savePersonalNote = (student: string, id: number, value: string) => 
   }
 };
 
+const REVIEW_LOG_KEY = 'library-review-log';
+
+export const logReview = () => {
+  try {
+    const entries: number[] = JSON.parse(localStorage.getItem(REVIEW_LOG_KEY) ?? '[]');
+    entries.push(Date.now());
+    localStorage.setItem(REVIEW_LOG_KEY, JSON.stringify(entries.slice(-500)));
+  } catch {
+    // Ignore storage failures.
+  }
+};
+
+export const countReviewedToday = (): number => {
+  try {
+    const entries: number[] = JSON.parse(localStorage.getItem(REVIEW_LOG_KEY) ?? '[]');
+    const today = new Date().toDateString();
+    return entries.filter((t) => new Date(t).toDateString() === today).length;
+  } catch {
+    return 0;
+  }
+};
+
 /** Consecutive-day streak ending today, based on log entry dates. */
 export const computeStreak = (entries: LogEntry[]): number => {
   if (entries.length === 0) return 0;

@@ -26,3 +26,30 @@ export const playMeow = () => {
     // Ignore — audio is a nice-to-have, never block interaction.
   }
 };
+
+/** Low warm "purr" chime — used for the Library's Mark Checked action. */
+export const playPurr = () => {
+  try {
+    if (!ctx) {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      ctx = new AudioCtx();
+    }
+    if (ctx.state === 'suspended') ctx.resume();
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(120, now);
+    osc.frequency.linearRampToValueAtTime(160, now + 0.25);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.06, now + 0.05);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.32);
+  } catch {
+    // Ignore — audio is a nice-to-have, never block interaction.
+  }
+};
