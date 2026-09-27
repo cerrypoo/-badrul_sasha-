@@ -17,6 +17,7 @@ import { PawCursorTrail } from './components/PawCursorTrail';
 import { CommandPalette } from './components/CommandPalette';
 import { BackToTop } from './components/BackToTop';
 import { ToastProvider } from './components/ToastProvider';
+import { PageLoadingScreen } from './components/PageLoadingScreen';
 import { playMeow } from './utils/meow';
 import { createEmptyJobsheets } from './utils/jobsheetHelpers';
 
@@ -142,20 +143,36 @@ function AppContent() {
     }
   };
 
+  const [transitioning, setTransitioning] = useState(false);
+
+  const goToPage = (target: 'home' | 'jobsheet' | 'library', after: () => void) => {
+    if (page === target) {
+      after();
+      return;
+    }
+    setTransitioning(true);
+    setTimeout(() => {
+      setPage(target);
+      after();
+      setTransitioning(false);
+    }, 4000);
+  };
+
   const handleNavigateSection = (id: string) => {
-    setPage('home');
-    setPendingScrollId(id);
+    goToPage('home', () => setPendingScrollId(id));
   };
 
   const handleNavigateJobsheet = () => {
-    setPage('jobsheet');
-    window.scrollTo({ top: 0 });
+    goToPage('jobsheet', () => window.scrollTo({ top: 0 }));
   };
 
   const handleNavigateLibrary = () => {
-    setPage('library');
-    window.scrollTo({ top: 0 });
+    goToPage('library', () => window.scrollTo({ top: 0 }));
   };
+
+  if (transitioning) {
+    return <PageLoadingScreen />;
+  }
 
   if (page === 'jobsheet' || page === 'library') {
     return (
