@@ -1,5 +1,6 @@
 import React from 'react';
 import { Heart } from 'lucide-react';
+import { CrimeTape } from './CrimeTape';
 
 interface FooterProps {
   onNavigateSection: (id: string) => void;
@@ -15,8 +16,9 @@ export const Footer: React.FC<FooterProps> = ({
   const currentYear = 2026;
 
   return (
-    <footer className="w-full bg-slate-950 border-t border-slate-900 py-10 px-4 sm:px-6 lg:px-8 text-slate-400 text-xs">
-      <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+    <footer className="relative w-full bg-slate-950 border-t border-slate-900 py-10 px-4 sm:px-6 lg:px-8 text-slate-400 text-xs overflow-hidden">
+      <CrimeTape position="top" />
+      <div className="max-w-6xl mx-auto mt-6 flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Brand & Mission */}
         <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4 text-center sm:text-left">
           <span className="font-semibold text-slate-200 tracking-wide">

@@ -18,8 +18,10 @@ import { CommandPalette } from './components/CommandPalette';
 import { BackToTop } from './components/BackToTop';
 import { ToastProvider } from './components/ToastProvider';
 import { PageLoadingScreen } from './components/PageLoadingScreen';
+import { PinGate } from './components/PinGate';
 import { playMeow } from './utils/meow';
 import { createEmptyJobsheets } from './utils/jobsheetHelpers';
+import { isUnlocked, lock } from './utils/auth';
 
 export default function App() {
   return (
@@ -31,8 +33,7 @@ export default function App() {
 
 function AppContent() {
   const [themeMode, setThemeMode] = useState<ThemeMode>('day');
-  const [activeSection, setActiveSection] = useState<string>('hero');
-  const [page, setPage] = useState<'home' | 'jobsheet' | 'library'>('home');
+  const [page, setPage] = useState<'home' | 'about' | 'jobsheet' | 'library'>('home');
   const [pendingScrollId, setPendingScrollId] = useState<string | null>(null);
   const [jobsheetsByStudent, setJobsheetsByStudent] = useState<Record<Student, JobsheetItem[]>>({
     sasha: createEmptyJobsheets(),
@@ -51,11 +52,25 @@ function AppContent() {
 
   // Deep link: #jobsheet-<student>-<id> opens the Jobsheet page for that student
   const [deepLinkStudent, setDeepLinkStudent] = useState<Student | null>(null);
+  const [adminUnlocked, setAdminUnlocked] = useState(() => isUnlocked('admin'));
   useEffect(() => {
     const match = window.location.hash.match(/^#jobsheet-(sasha|badrul)/);
     if (match) {
       setPage('jobsheet');
       setDeepLinkStudent(match[1] as Student);
+    }
+  }, []);
+
+  // One-shot reset of Library's "Reviewed today" counter via ?resetReviews=1
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('resetReviews') === '1') {
+      localStorage.removeItem('library-review-log');
+      localStorage.removeItem('jobsheet-log-sasha');
+      localStorage.removeItem('jobsheet-log-badrul');
+      params.delete('resetReviews');
+      const newSearch = params.toString();
+      window.history.replaceState({}, '', window.location.pathname + (newSearch ? `?${newSearch}` : '') + window.location.hash);
     }
   }, []);
 
@@ -83,9 +98,9 @@ function AppContent() {
     return () => document.removeEventListener('click', handleClick);
   }, []);
 
-  // Scroll to a section once the home page has mounted (needed when navigating from Jobsheet)
+  // Scroll to a section once its page has mounted (needed when navigating from another page)
   useEffect(() => {
-    if (page !== 'home' || !pendingScrollId) return;
+    if (!pendingScrollId) return;
     const el = document.getElementById(pendingScrollId);
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
@@ -103,58 +118,23 @@ function AppContent() {
     ]);
   }, []);
 
-  // Update active section on scroll
-  useEffect(() => {
-    const sections = ['hero', 'book', 'gallery'];
-    const handleScroll = () => {
-      const scrollY = window.scrollY;
-      const windowHeight = window.innerHeight;
-
-      for (const sectionId of sections) {
-        const el = document.getElementById(sectionId);
-        if (el) {
-          const top = el.offsetTop - 120;
-          const height = el.offsetHeight;
-          if (scrollY >= top && scrollY < top + height) {
-            setActiveSection(sectionId);
-            break;
-          }
-        }
-      }
-
-      // Default to hero if near top
-      if (scrollY < windowHeight * 0.4) {
-        setActiveSection('hero');
-      }
-    };
-
-    window.addEventListener('scroll', handleScroll, { passive: true });
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
-
   const handleToggleTheme = () => {
     setThemeMode((prev) => (prev === 'day' ? 'night' : 'day'));
   };
 
-  const handleOpenBooking = () => {
-    const el = document.getElementById('book');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth' });
-    }
-  };
-
   const [transitioning, setTransitioning] = useState(false);
-  const [transitionTarget, setTransitionTarget] = useState<'home' | 'jobsheet' | 'library'>('home');
+  const [transitionTarget, setTransitionTarget] = useState<'home' | 'about' | 'jobsheet' | 'library'>('home');
   const [transitionDuration, setTransitionDuration] = useState(4000);
   const [hasShownLoading, setHasShownLoading] = useState(false);
 
-  const PAGE_LABELS: Record<'home' | 'jobsheet' | 'library', string> = {
+  const PAGE_LABELS: Record<'home' | 'about' | 'jobsheet' | 'library', string> = {
     home: 'Home',
+    about: 'About Us',
     jobsheet: 'Jobsheet Portal',
     library: 'Library',
   };
 
-  const goToPage = (target: 'home' | 'jobsheet' | 'library', after: () => void) => {
+  const goToPage = (target: 'home' | 'about' | 'jobsheet' | 'library', after: () => void) => {
     if (page === target) {
       after();
       return;
@@ -172,7 +152,7 @@ function AppContent() {
   };
 
   const handleNavigateSection = (id: string) => {
-    goToPage('home', () => setPendingScrollId(id));
+    goToPage(id === 'hero' ? 'home' : 'about', () => setPendingScrollId(id));
   };
 
   const handleNavigateJobsheet = () => {
@@ -185,6 +165,36 @@ function AppContent() {
 
   if (transitioning) {
     return <PageLoadingScreen destination={PAGE_LABELS[transitionTarget]} duration={transitionDuration} />;
+  }
+
+  if (page === 'about') {
+    return (
+      <div className="min-h-screen bg-slate-900 text-slate-100">
+        <div className="fixed top-0 left-0 h-0.5 bg-teal-400 z-[60] transition-all" style={{ width: `${scrollPct}%` }} />
+        <PawCursorTrail />
+        <BackToTop />
+        <CommandPalette
+          onNavigateSection={handleNavigateSection}
+          onNavigateJobsheet={handleNavigateJobsheet}
+          onNavigateLibrary={handleNavigateLibrary}
+        />
+        <Navbar
+          themeMode={themeMode}
+          onToggleTheme={handleToggleTheme}
+          activeSection={page}
+          onNavigateJobsheet={handleNavigateJobsheet}
+          onNavigateLibrary={handleNavigateLibrary}
+          onNavigateSection={handleNavigateSection}
+        />
+        <BookingSection />
+        <GallerySection />
+        <LeaderboardSection jobsheetsByStudent={jobsheetsByStudent} />
+        <RecentActivitySection jobsheetsByStudent={jobsheetsByStudent} />
+        <FaqTestimonialSection />
+        <TechStackSection />
+        <Footer onNavigateSection={handleNavigateSection} onNavigateJobsheet={handleNavigateJobsheet} onNavigateLibrary={handleNavigateLibrary} />
+      </div>
+    );
   }
 
   if (page === 'jobsheet' || page === 'library') {
@@ -213,10 +223,19 @@ function AppContent() {
             onResetStudentJobsheets={resetStudentJobsheets}
             initialStudent={deepLinkStudent}
           />
-        ) : (
+        ) : adminUnlocked ? (
           <LibraryPage
             jobsheetsByStudent={jobsheetsByStudent}
             onUpdateStudentJobsheets={updateStudentJobsheets}
+            onLock={() => { lock('admin'); setAdminUnlocked(false); }}
+          />
+        ) : (
+          <PinGate
+            id="admin"
+            name="Lecturer"
+            label="Workspace"
+            onUnlocked={() => setAdminUnlocked(true)}
+            onCancel={() => handleNavigateSection('hero')}
           />
         )}
         <Footer onNavigateSection={handleNavigateSection} onNavigateJobsheet={handleNavigateJobsheet} onNavigateLibrary={handleNavigateLibrary} />
@@ -239,13 +258,13 @@ function AppContent() {
         onNavigateLibrary={handleNavigateLibrary}
       />
 
-      {/* 1. Hero Section with Optimized Dual-Video Background */}
+      {/* 1. Hero Section with cat-tree photo background */}
       <HeroVideoBackground themeMode={themeMode} onToggleTheme={handleToggleTheme}>
         {/* Navigation Bar matching reference photo */}
         <Navbar
           themeMode={themeMode}
           onToggleTheme={handleToggleTheme}
-          activeSection={activeSection}
+          activeSection="hero"
           onNavigateJobsheet={handleNavigateJobsheet}
           onNavigateLibrary={handleNavigateLibrary}
           onNavigateSection={handleNavigateSection}
@@ -254,32 +273,11 @@ function AppContent() {
         {/* Hero Body: Stylized CATS wordmark & Book Now CTA */}
         <HeroSection
           themeMode={themeMode}
-          onBookNowClick={handleOpenBooking}
+          onBookNowClick={() => handleNavigateSection('book')}
           totalChecked={totalChecked}
           totalJobsheets={totalJobsheets}
         />
       </HeroVideoBackground>
-
-      {/* 2. Interactive Booking Section ("Book") */}
-      <BookingSection />
-
-      {/* 4. Gallery Section ("Gallery") */}
-      <GallerySection />
-
-      {/* 5. Leaderboard */}
-      <LeaderboardSection jobsheetsByStudent={jobsheetsByStudent} />
-
-      {/* 5a. Recent Activity */}
-      <RecentActivitySection jobsheetsByStudent={jobsheetsByStudent} />
-
-      {/* 5b. FAQ + Testimonials */}
-      <FaqTestimonialSection />
-
-      {/* 5c. Tech Stack */}
-      <TechStackSection />
-
-      {/* 6. Footer */}
-      <Footer onNavigateSection={handleNavigateSection} onNavigateJobsheet={handleNavigateJobsheet} onNavigateLibrary={handleNavigateLibrary} />
     </div>
   );
 }

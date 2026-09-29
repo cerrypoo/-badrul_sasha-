@@ -121,6 +121,27 @@
   display: inline-block;
 }
 
+/* Crime scene tape: scrolling text + marching hazard stripes */
+@keyframes tapeMarquee {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.tape-marquee {
+  animation: tapeMarquee 28s linear infinite;
+}
+/* 39.6px = one full 28px stripe cycle projected onto the x-axis at a
+   135deg gradient angle (28 / sin(135deg)) — shifting by exactly this
+   tile width is what makes the loop seamless instead of jumping. */
+@keyframes hazardMarch {
+  0% { background-position: 0 0; }
+  100% { background-position: 39.6px 0; }
+}
+.hazard-stripe {
+  background-size: 39.6px 100%;
+  background-repeat: repeat-x;
+  animation: hazardMarch 1s linear infinite;
+}
+
 /* Scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;

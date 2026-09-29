@@ -78,7 +78,7 @@ export const JobsheetPage: React.FC<JobsheetPageProps> = ({
   if (pendingAuth) {
     return (
       <PinGate
-        student={pendingAuth}
+        id={pendingAuth}
         name={STUDENT_NAMES[pendingAuth]}
         onUnlocked={() => {
           setSelected(pendingAuth);

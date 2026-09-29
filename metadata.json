@@ -1,6 +1,0 @@
-{
-  "name": "Ocean Whiskers Pet Care",
-  "description": "Boutique seaside cat hotel and premium feline wellness resort featuring panoramic ocean suites, spa pampering, and day-to-night interactive experiences.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

@@ -1,23 +1,23 @@
 import React, { useState } from 'react';
 import { Lock, ArrowLeft } from 'lucide-react';
 import { checkPin, unlock } from '../utils/auth';
-import { Student } from '../types';
 
 interface PinGateProps {
-  student: Student;
+  id: string;
   name: string;
+  label?: string;
   onUnlocked: () => void;
   onCancel: () => void;
 }
 
-export const PinGate: React.FC<PinGateProps> = ({ student, name, onUnlocked, onCancel }) => {
+export const PinGate: React.FC<PinGateProps> = ({ id, name, label = 'Jobsheet', onUnlocked, onCancel }) => {
   const [pin, setPin] = useState('');
   const [error, setError] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (checkPin(student, pin)) {
-      unlock(student);
+    if (checkPin(id, pin)) {
+      unlock(id);
       onUnlocked();
     } else {
       setError(true);
@@ -26,8 +26,17 @@ export const PinGate: React.FC<PinGateProps> = ({ student, name, onUnlocked, onC
   };
 
   return (
-    <section className="relative w-full min-h-[70vh] py-16 px-4 sm:px-6 lg:px-8 bg-slate-950 flex items-center justify-center">
-      <div className="w-full max-w-sm">
+    <section className="relative w-full min-h-[70vh] py-16 px-4 sm:px-6 lg:px-8 bg-slate-950 overflow-hidden flex items-center justify-center">
+      <div
+        className="absolute inset-0 opacity-[0.06] pointer-events-none"
+        style={{
+          backgroundImage: "url('images/paw_trail.jpg')",
+          backgroundRepeat: 'repeat',
+          backgroundSize: '220px',
+          filter: 'invert(1)',
+        }}
+      />
+      <div className="relative w-full max-w-sm">
         <button
           onClick={onCancel}
           className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-white transition-colors mb-6"
@@ -40,7 +49,7 @@ export const PinGate: React.FC<PinGateProps> = ({ student, name, onUnlocked, onC
           <div className="w-12 h-12 mx-auto rounded-full bg-teal-500/15 text-teal-400 flex items-center justify-center mb-4">
             <Lock className="w-5 h-5" />
           </div>
-          <h1 className="text-lg font-bold text-white">This is {name}'s Jobsheet</h1>
+          <h1 className="text-lg font-bold text-white">This is {name}'s {label}</h1>
           <p className="mt-1 text-xs text-slate-400">Enter {name}'s PIN to continue.</p>
 
           <form onSubmit={handleSubmit} className="mt-6">

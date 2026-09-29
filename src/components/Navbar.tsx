@@ -20,7 +20,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   onNavigateSection,
 }) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const showThemeToggle = activeSection !== 'jobsheet' && activeSection !== 'library';
+  const showThemeToggle = activeSection !== 'jobsheet' && activeSection !== 'library' && activeSection !== 'about';
 
   const scrollToSection = (id: string) => {
     setMobileMenuOpen(false);
@@ -38,7 +38,7 @@ export const Navbar: React.FC<NavbarProps> = ({
   };
 
   return (
-    <header className="sticky top-0 w-full z-50 transition-all duration-300">
+    <header className="relative w-full z-50">
       {/* Top Brand Banner matching the screenshot */}
       <div className="w-full text-center py-2.5 px-4 bg-slate-950/90 border-b border-white/10">
         <h1 className="text-sm md:text-base font-semibold tracking-wider text-white drop-shadow-md">
@@ -64,7 +64,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <button
             onClick={() => scrollToSection('book')}
             className={`px-3.5 py-1.5 text-xs font-medium tracking-wide uppercase transition-all rounded-full ${
-              activeSection === 'book'
+              activeSection === 'about'
                 ? 'text-white bg-white/20 shadow-sm'
                 : 'text-white/80 hover:text-white hover:bg-white/10'
             }`}

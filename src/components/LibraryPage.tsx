@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Sparkles, FileText, Eye, Radio, PawPrint, Bell, MessageSquare,
-  LayoutGrid, List, Undo2, CheckCheck, Download, ClipboardCheck, BarChart3,
+  LayoutGrid, List, Undo2, CheckCheck, Download, ClipboardCheck, BarChart3, Lock,
 } from 'lucide-react';
 import { Student, JobsheetItem } from '../types';
 import { playPurr } from '../utils/meow';
@@ -27,11 +27,13 @@ type ViewMode = 'grid' | 'list';
 interface LibraryPageProps {
   jobsheetsByStudent: Record<Student, JobsheetItem[]>;
   onUpdateStudentJobsheets: (student: Student, jobsheets: JobsheetItem[]) => void;
+  onLock: () => void;
 }
 
 export const LibraryPage: React.FC<LibraryPageProps> = ({
   jobsheetsByStudent,
   onUpdateStudentJobsheets,
+  onLock,
 }) => {
   const [burstKey, setBurstKey] = useState<string | null>(null);
   const [classBurst, setClassBurst] = useState(false);
@@ -143,6 +145,16 @@ export const LibraryPage: React.FC<LibraryPageProps> = ({
       )}
 
       <div className="relative max-w-5xl mx-auto">
+        <div className="flex justify-end mb-2">
+          <button
+            onClick={onLock}
+            title="Lock this workspace on this device"
+            className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-amber-400 transition-colors"
+          >
+            <Lock className="w-3.5 h-3.5" />
+            Lock
+          </button>
+        </div>
         <div className="text-center max-w-2xl mx-auto mb-8">
           <div className="inline-flex items-center gap-2 text-xs font-semibold tracking-widest uppercase text-teal-400 mb-2">
             <Sparkles className="w-3.5 h-3.5" />

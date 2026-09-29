@@ -10,6 +10,25 @@ interface HeroSectionProps {
   totalJobsheets: number;
 }
 
+const MILESTONES = [25, 50, 100];
+
+const useMilestoneBurst = (pct: number) => {
+  const [burst, setBurst] = useState(false);
+  const hit = useRef<Set<number>>(new Set());
+
+  useEffect(() => {
+    const newlyHit = MILESTONES.find((m) => pct >= m && !hit.current.has(m));
+    if (newlyHit) {
+      hit.current.add(newlyHit);
+      setBurst(true);
+      const t = setTimeout(() => setBurst(false), 2200);
+      return () => clearTimeout(t);
+    }
+  }, [pct]);
+
+  return burst;
+};
+
 const useCountUp = (target: number) => {
   const [value, setValue] = useState(0);
   const ref = useRef<HTMLDivElement | null>(null);
@@ -46,6 +65,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   totalJobsheets,
 }) => {
   const counter = useCountUp(totalChecked);
+  const pct = totalJobsheets ? (totalChecked / totalJobsheets) * 100 : 0;
+  const burst = useMilestoneBurst(pct);
   const scrollToBooking = () => {
     const el = document.getElementById('book');
     if (el) {
@@ -57,6 +78,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
 
   return (
     <div id="hero" className="flex-1 flex flex-col items-center justify-center text-center px-4 py-8 md:py-16">
+      {burst && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div className="text-6xl animate-bounce">🐾🎉✨</div>
+        </div>
+      )}
+
       {/* Top subtle ambient hint */}
       <div className="mb-4 inline-flex items-center gap-2 text-xs md:text-sm font-medium tracking-widest uppercase text-white/90 drop-shadow-md">
         <Sparkles className="w-3.5 h-3.5 text-teal-300 animate-spin [animation-duration:8s]" />
