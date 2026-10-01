@@ -4,7 +4,7 @@
 // between Sasha and Badrul (and the admin/lecturer view), not a substitute
 // for real auth.
 const PINS: Record<string, string> = {
-  sasha: '1794',
+  sasha: '0448',
   badrul: '2468',
   admin: '0000',
 };
