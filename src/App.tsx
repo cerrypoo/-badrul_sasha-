@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ThemeMode, Student, JobsheetItem } from './types';
 import { preloadVideos } from './services/videoCache';
 import { Navbar } from './components/Navbar';
@@ -22,7 +22,14 @@ import { PinGate } from './components/PinGate';
 import { playMeow } from './utils/meow';
 import { createEmptyJobsheets } from './utils/jobsheetHelpers';
 import { isUnlocked, lock } from './utils/auth';
-import { applyDocuments, loadDocuments } from './lib/documents';
+import {
+  applyDocuments,
+  applyReviewState,
+  loadDocuments,
+  loadReviewState,
+  saveReviewState,
+  toReviewState,
+} from './lib/documents';
 import { useToast } from './components/ToastProvider';
 
 export default function App() {
@@ -53,15 +60,21 @@ function AppContent() {
     setJobsheetsByStudent((prev) => ({ ...prev, [student]: createEmptyJobsheets() }));
   };
 
-  // Uploaded PDFs/TXTs live in Supabase Storage; pull them in so they survive a refresh
+  // Uploads and lecturer review state live in Supabase Storage; pull them in so they survive a refresh
+  const loadedRef = useRef(false);
+  const lastSavedRef = useRef('');
+
   const reloadDocuments = async () => {
     try {
-      const docs = await loadDocuments();
+      const [docs, saved] = await Promise.all([loadDocuments(), loadReviewState()]);
       const [sasha, badrul] = await Promise.all([
-        applyDocuments(jobsheetsByStudent.sasha, docs.sasha),
-        applyDocuments(jobsheetsByStudent.badrul, docs.badrul),
+        applyDocuments(applyReviewState(jobsheetsByStudent.sasha, saved?.sasha), docs.sasha),
+        applyDocuments(applyReviewState(jobsheetsByStudent.badrul, saved?.badrul), docs.badrul),
       ]);
-      setJobsheetsByStudent({ sasha, badrul });
+      const next = { sasha, badrul };
+      lastSavedRef.current = JSON.stringify(toReviewState(next));
+      loadedRef.current = true;
+      setJobsheetsByStudent(next);
     } catch (error) {
       console.error('LOAD DOCUMENTS ERROR:', error);
       showToast('Could not load uploaded jobsheets.');
@@ -72,6 +85,24 @@ function AppContent() {
     reloadDocuments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Save status/feedback changes (debounced); skipped until the first load so it can't wipe saved state
+  useEffect(() => {
+    if (!loadedRef.current) return;
+    const state = toReviewState(jobsheetsByStudent);
+    const json = JSON.stringify(state);
+    if (json === lastSavedRef.current) return;
+
+    const timer = setTimeout(() => {
+      saveReviewState(state)
+        .then(() => { lastSavedRef.current = json; })
+        .catch((error) => {
+          console.error('SAVE REVIEW STATE ERROR:', error);
+          showToast('Could not save review changes.');
+        });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [jobsheetsByStudent, showToast]);
 
   // Deep link: #jobsheet-<student>-<id> opens the Jobsheet page for that student
   const [deepLinkStudent, setDeepLinkStudent] = useState<Student | null>(null);

@@ -149,6 +149,84 @@ export const applyDocuments = async (
   });
 };
 
+/*
+ * Lecturer review state (status + feedback note) per jobsheet.
+ *
+ * ponytail: same RLS limits as above, so each save uploads a new
+ * state/{timestamp}.json and the newest one wins. Two people saving at
+ * the same moment means the last save wins; move this to a table with
+ * insert/update policies if that starts to matter.
+ */
+
+const STATE_FOLDER = 'state';
+
+export type ReviewState = Record<
+  Student,
+  Record<number, Pick<JobsheetItem, 'status' | 'note'>>
+>;
+
+export const toReviewState = (
+  byStudent: Record<Student, JobsheetItem[]>
+): ReviewState => {
+  const state = { sasha: {}, badrul: {} } as ReviewState;
+
+  for (const student of STUDENTS) {
+    for (const j of byStudent[student]) {
+      state[student][j.id] = { status: j.status, note: j.note };
+    }
+  }
+
+  return state;
+};
+
+export const applyReviewState = (
+  jobsheets: JobsheetItem[],
+  saved: ReviewState[Student] | undefined
+): JobsheetItem[] =>
+  jobsheets.map((j) =>
+    saved?.[j.id] ? { ...j, ...saved[j.id] } : j
+  );
+
+export const loadReviewState = async (): Promise<ReviewState | null> => {
+  const { data, error } = await supabase.storage
+    .from(BUCKET)
+    .list(STATE_FOLDER, {
+      limit: 5,
+      sortBy: { column: 'name', order: 'desc' },
+    });
+
+  if (error) {
+    throw error;
+  }
+
+  const latest = data?.find((f) => /^\d+\.json$/.test(f.name));
+  if (!latest) return null;
+
+  const { data: blob, error: downloadError } = await supabase.storage
+    .from(BUCKET)
+    .download(`${STATE_FOLDER}/${latest.name}`);
+
+  if (downloadError) {
+    throw downloadError;
+  }
+
+  return JSON.parse(await blob.text());
+};
+
+export const saveReviewState = async (state: ReviewState) => {
+  const { error } = await supabase.storage
+    .from(BUCKET)
+    .upload(
+      `${STATE_FOLDER}/${Date.now()}.json`,
+      new Blob([JSON.stringify(state)], { type: 'application/json' }),
+      { contentType: 'application/json', upsert: false }
+    );
+
+  if (error) {
+    throw error;
+  }
+};
+
 export const removeDocument = async (
   student: Student,
   id: number,
