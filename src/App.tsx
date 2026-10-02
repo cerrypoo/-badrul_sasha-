@@ -22,6 +22,8 @@ import { PinGate } from './components/PinGate';
 import { playMeow } from './utils/meow';
 import { createEmptyJobsheets } from './utils/jobsheetHelpers';
 import { isUnlocked, lock } from './utils/auth';
+import { applyDocuments, loadDocuments } from './lib/documents';
+import { useToast } from './components/ToastProvider';
 
 export default function App() {
   return (
@@ -41,6 +43,7 @@ function AppContent() {
   });
 
   const [scrollPct, setScrollPct] = useState(0);
+  const { showToast } = useToast();
 
   const updateStudentJobsheets = (student: Student, jobsheets: JobsheetItem[]) => {
     setJobsheetsByStudent((prev) => ({ ...prev, [student]: jobsheets }));
@@ -49,6 +52,26 @@ function AppContent() {
   const resetStudentJobsheets = (student: Student) => {
     setJobsheetsByStudent((prev) => ({ ...prev, [student]: createEmptyJobsheets() }));
   };
+
+  // Uploaded PDFs/TXTs live in Supabase Storage; pull them in so they survive a refresh
+  const reloadDocuments = async () => {
+    try {
+      const docs = await loadDocuments();
+      const [sasha, badrul] = await Promise.all([
+        applyDocuments(jobsheetsByStudent.sasha, docs.sasha),
+        applyDocuments(jobsheetsByStudent.badrul, docs.badrul),
+      ]);
+      setJobsheetsByStudent({ sasha, badrul });
+    } catch (error) {
+      console.error('LOAD DOCUMENTS ERROR:', error);
+      showToast('Could not load uploaded jobsheets.');
+    }
+  };
+
+  useEffect(() => {
+    reloadDocuments();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Deep link: #jobsheet-<student>-<id> opens the Jobsheet page for that student
   const [deepLinkStudent, setDeepLinkStudent] = useState<Student | null>(null);
@@ -227,6 +250,7 @@ function AppContent() {
           <LibraryPage
             jobsheetsByStudent={jobsheetsByStudent}
             onUpdateStudentJobsheets={updateStudentJobsheets}
+            onRefresh={reloadDocuments}
             onLock={() => { lock('admin'); setAdminUnlocked(false); }}
           />
         ) : (

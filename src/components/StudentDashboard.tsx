@@ -49,6 +49,7 @@ import {
 import { useToast } from './ToastProvider';
 
 import { supabase } from '../lib/supabase';
+import { removeDocument } from '../lib/documents';
 
 const STATUS_META: Record<
   JobsheetStatus,
@@ -582,37 +583,6 @@ export const StudentDashboard: React.FC<
           signedUrlData
         );
 
-        /*
-         * 3. Update database metadata
-         *
-         * The Edge Function should already insert
-         * the document record.
-         *
-         * This update fills in student + jobsheet_id.
-         */
-
-        const {
-          error: metadataError,
-        } =
-          await supabase
-            .from('documents')
-            .update({
-              student:
-                student.toString(),
-              jobsheet_id: id,
-            })
-            .eq(
-              'file_path',
-              actualFilePath
-            );
-
-        if (metadataError) {
-          console.warn(
-            'Could not update student/jobsheet metadata:',
-            metadataError
-          );
-        }
-
         showToast(
           `Jobsheet ${id} ${isTxt ? 'TXT' : 'PDF'} uploaded successfully!`
         );
@@ -1030,103 +1000,22 @@ export const StudentDashboard: React.FC<
       }
 
       try {
-        const {
-          data: documents,
-          error,
-        } = await supabase
-          .from('documents')
-          .select(
-            'id, file_path, file_type, file_name'
-          )
-          .eq(
-            'student',
-            student.toString()
-          )
-          .eq(
-            'jobsheet_id',
-            id
-          )
-          .eq(
-            'file_type',
-            'application/pdf'
-          )
-          .order(
-            'uploaded_at',
-            {
-              ascending: false,
-            }
-          )
-          .limit(1);
-
-        if (error) {
-          console.error(
-            'DATABASE LOOKUP ERROR:',
-            error
-          );
-        } else if (
-          documents &&
-          documents.length > 0
-        ) {
-          const document =
-            documents[0];
-
-          /*
-           * Delete from Storage
-           */
-
-          const {
-            error:
-              storageError,
-          } =
-            await supabase.storage
-              .from(
-                'documents'
-              )
-              .remove([
-                document.file_path,
-              ]);
-
-          if (
-            storageError
-          ) {
-            console.error(
-              'STORAGE DELETE ERROR:',
-              storageError
-            );
-          }
-
-          /*
-           * Delete database record
-           */
-
-          const {
-            error:
-              databaseError,
-          } =
-            await supabase
-              .from(
-                'documents'
-              )
-              .delete()
-              .eq(
-                'id',
-                document.id
-              );
-
-          if (
-            databaseError
-          ) {
-            console.error(
-              'DATABASE DELETE ERROR:',
-              databaseError
-            );
-          }
-        }
+        await removeDocument(
+          student,
+          id,
+          'pdf'
+        );
       } catch (error) {
         console.error(
           'DELETE PDF ERROR:',
           error
         );
+
+        showToast(
+          `Could not remove PDF from Jobsheet ${id}`
+        );
+
+        return;
       }
 
       appendLog(
@@ -1194,103 +1083,22 @@ export const StudentDashboard: React.FC<
       }
 
       try {
-        const {
-          data: documents,
-          error,
-        } = await supabase
-          .from('documents')
-          .select(
-            'id, file_path, file_type, file_name'
-          )
-          .eq(
-            'student',
-            student.toString()
-          )
-          .eq(
-            'jobsheet_id',
-            id
-          )
-          .eq(
-            'file_type',
-            'text/plain'
-          )
-          .order(
-            'uploaded_at',
-            {
-              ascending: false,
-            }
-          )
-          .limit(1);
-
-        if (error) {
-          console.error(
-            'DATABASE LOOKUP ERROR:',
-            error
-          );
-        } else if (
-          documents &&
-          documents.length > 0
-        ) {
-          const document =
-            documents[0];
-
-          /*
-           * Delete TXT from Storage
-           */
-
-          const {
-            error:
-              storageError,
-          } =
-            await supabase.storage
-              .from(
-                'documents'
-              )
-              .remove([
-                document.file_path,
-              ]);
-
-          if (
-            storageError
-          ) {
-            console.error(
-              'TXT STORAGE DELETE ERROR:',
-              storageError
-            );
-          }
-
-          /*
-           * Delete TXT database record
-           */
-
-          const {
-            error:
-              databaseError,
-          } =
-            await supabase
-              .from(
-                'documents'
-              )
-              .delete()
-              .eq(
-                'id',
-                document.id
-              );
-
-          if (
-            databaseError
-          ) {
-            console.error(
-              'TXT DATABASE DELETE ERROR:',
-              databaseError
-            );
-          }
-        }
+        await removeDocument(
+          student,
+          id,
+          'txt'
+        );
       } catch (error) {
         console.error(
           'DELETE TXT ERROR:',
           error
         );
+
+        showToast(
+          `Could not remove TXT from Jobsheet ${id}`
+        );
+
+        return;
       }
 
       appendLog(
