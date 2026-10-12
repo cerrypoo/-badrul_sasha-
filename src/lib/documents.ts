@@ -8,12 +8,17 @@ import { JobsheetItem, Student } from '../types';
  *
  * ponytail: the anon key can upload and list storage, but RLS blocks
  * deleting objects and writing the documents table. So removing a file
- * uploads an empty "tombstone" named jobsheet-{id}-{timestamp}-__removed__.{pdf|txt};
+ * uploads an empty "tombstone" named
+ * jobsheet-{id}-{timestamp}-__removed__.{pdf|txt|html};
  * the newest file per jobsheet+kind wins. Add a storage DELETE policy in
  * Supabase to delete files for real instead.
  */
 
-export type DocumentKind = 'pdf' | 'txt';
+/*
+ * CHANGE 1: 'html' added. HTML files are the "Live" submissions
+ * (shown as liveName / liveUrl on the jobsheet).
+ */
+export type DocumentKind = 'pdf' | 'txt' | 'html';
 
 const BUCKET = 'documents';
 const REMOVED = '__removed__';
@@ -47,6 +52,19 @@ export const formatUploadedAt = (date: Date) =>
     minute: '2-digit',
   });
 
+/*
+ * CHANGE 2: work out the kind from the file extension.
+ * .txt -> txt, .html/.htm -> html, everything else -> pdf (as before).
+ */
+const kindFromName = (name: string): DocumentKind => {
+  const lower = name.toLowerCase();
+
+  if (lower.endsWith('.txt')) return 'txt';
+  if (lower.endsWith('.html') || lower.endsWith('.htm')) return 'html';
+
+  return 'pdf';
+};
+
 export const loadDocuments = async (): Promise<DocumentIndex> => {
   const index: DocumentIndex = { sasha: {}, badrul: {} };
 
@@ -66,7 +84,7 @@ export const loadDocuments = async (): Promise<DocumentIndex> => {
       if (!match) continue;
 
       const [, id, stamp, name] = match;
-      const kind: DocumentKind = name.toLowerCase().endsWith('.txt') ? 'txt' : 'pdf';
+      const kind = kindFromName(name);
       const key = `${id}:${kind}`;
 
       if (!latest[key] || Number(stamp) > latest[key].stamp) {
@@ -98,8 +116,11 @@ export const applyDocuments = async (
   jobsheets: JobsheetItem[],
   docs: DocumentIndex[Student]
 ): Promise<JobsheetItem[]> => {
+  /*
+   * CHANGE 3: html files also need signed URLs.
+   */
   const files = Object.values(docs).flatMap((slot) =>
-    [slot.pdf, slot.txt].filter((f): f is StoredDocument => !!f)
+    [slot.pdf, slot.txt, slot.html].filter((f): f is StoredDocument => !!f)
   );
 
   const urls: Record<string, string> = {};
@@ -139,6 +160,14 @@ export const applyDocuments = async (
       next.txtName = slot.txt?.name ?? null;
       next.txtUrl = slot.txt ? urls[slot.txt.path] ?? null : null;
       next.txtUploadedAt = slot.txt?.uploadedAt ?? null;
+    }
+
+    /*
+     * CHANGE 4: link the html file to the jobsheet's Live fields.
+     */
+    if (slot.html !== undefined) {
+      next.liveName = slot.html?.name ?? null;
+      next.liveUrl = slot.html ? urls[slot.html.path] ?? null : null;
     }
 
     if (next.status === 'not-started' && (next.pdfUrl || next.txtUrl)) {
