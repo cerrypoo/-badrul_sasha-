@@ -732,8 +732,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
   /*
    * Delete Live
    *
-   * The file path is read from the signed URL, so this works
-   * without needing to change lib/documents.ts.
+   * Uses the same "removed" placeholder as PDF and TXT,
+   * because Supabase RLS blocks real deletes.
    */
 
   const handleDeleteLive = async (id: number) => {
@@ -744,23 +744,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({
     }
 
     try {
-      const marker = '/documents/';
-      const pathname = new URL(job.liveUrl).pathname;
-      const markerIndex = pathname.indexOf(marker);
-
-      if (markerIndex !== -1) {
-        const storagePath = decodeURIComponent(
-          pathname.slice(markerIndex + marker.length)
-        );
-
-        const { error } = await supabase.storage
-          .from('documents')
-          .remove([storagePath]);
-
-        if (error) {
-          throw error;
-        }
-      }
+      await removeDocument(student, id, 'html');
     } catch (error) {
       console.error('DELETE LIVE ERROR:', error);
 
